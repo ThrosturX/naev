@@ -7,6 +7,7 @@
  * @brief Handles missions.
  */
 /** @cond */
+#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -164,6 +165,7 @@ static int mission_init( Mission* mission, const MissionData* misn, int genid, i
    nlua_setenv(naevL, mission->env, "mem");
 
    /* load the file */
+   LOG("nlua_dobufenv: %s", mission->title);
    if (nlua_dobufenv(mission->env, misn->lua, strlen(misn->lua), misn->sourcefile) != 0) {
       WARN(_("Error loading mission file: %s\n"
           "%s\n"
@@ -227,6 +229,8 @@ static int mission_meetReq( int mission, int faction,
 {
    const MissionData* misn = mission_get( mission );
    if (misn == NULL) /* In case it doesn't exist */
+      return 0;
+   if (strcmp( misn->name, "Crimson Gauntlet" )) /* HACK: To debug the gauntlet in particular. */
       return 0;
 
    /* If spob, must match spob. */
@@ -694,8 +698,11 @@ void mission_cleanup( Mission* misn )
     * Mission struct of all zeros. Looking at the implementation, luaL_ref()
     * never returns 0, but this is probably undefined behavior.
     */
-   if (misn->env != 0)
+   if (misn->env != 0 && misn->env != LUA_NOREF) {
+      assert(naevL != NULL);
+      LOG("nlua_freeEnv: %s", misn->title);
       nlua_freeEnv(misn->env);
+   }
 
    /* Data. */
    free(misn->title);
