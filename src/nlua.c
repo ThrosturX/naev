@@ -285,8 +285,10 @@ nlua_env nlua_newEnv( int rw )
  *    @param env Enviornment to free.
  */
 void nlua_freeEnv(nlua_env env) {
-   if (naevL != NULL && env != LUA_NOREF)
+   if (naevL != NULL && env != LUA_NOREF) {
       luaL_unref(naevL, LUA_REGISTRYINDEX, env);
+      lua_gc( naevL, LUA_GCCOLLECT, 0 );
+   }
 }
 
 /*
