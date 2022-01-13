@@ -232,6 +232,7 @@ static int audioL_gc( lua_State *L )
       return 0;
    soundLock();
    alDeleteSources( 1, &la->source );
+   WARN("-1");
    /* Check if buffers need freeing. */
    la->buf->refcount--;
    if (la->buf->refcount <= 0) {
@@ -295,6 +296,7 @@ static int audioL_new( lua_State *L )
          NLUA_ERROR(L,"Unable to open '%s'", name );
 
       soundLock();
+      WARN("+1");
       alGenSources( 1, &la.source );
 
       la.buf = malloc( sizeof(LuaBuffer_t) );
@@ -348,6 +350,7 @@ static int audioL_clone( lua_State *L )
    }
 
    soundLock();
+   WARN("+1");
    alGenSources( 1, &la.source );
 
    /* Attach source buffer. */

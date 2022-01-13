@@ -537,6 +537,7 @@ int music_al_init (void)
    soundLock();
 
    /* Allocate source for music. */
+   WARN("+1");
    alGenSources( 1, &music_source );
 
    /* Generate buffers and sources. */
@@ -583,6 +584,7 @@ void music_al_exit (void)
    /* Free the music. */
    alDeleteBuffers( 2, music_buffer );
    alDeleteSources( 1, &music_source );
+   WARN("-1");
 
    /* Check for errors. */
    al_checkErr();

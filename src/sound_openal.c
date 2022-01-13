@@ -254,6 +254,7 @@ int sound_al_init (void)
    source_mstack  = SOUND_VOICES;
    source_stack   = malloc( sizeof( ALuint ) * source_mstack );
    while (source_nstack < SOUND_VOICES) {
+      WARN("+1");
       alGenSources( 1, &s );
       source_stack[source_nstack] = s;
 
@@ -482,6 +483,7 @@ void sound_al_free_sources_locked (void)
    if (source_all != NULL) {
       alSourceStopv(   source_nall, source_all );
       alDeleteSources( source_nall, source_all );
+      WARN("-1");
       free(source_all);
    }
    source_all        = NULL;
