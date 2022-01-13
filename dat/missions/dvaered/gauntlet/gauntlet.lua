@@ -29,6 +29,8 @@ local npc_description= _("A terminal to access the Crimson Gauntlet Virtual Real
 local gauntletsys = system.get("Crimson Gauntlet")
 
 local sfx_clear = audio.new( 'snd/sounds/jingles/victory.ogg' )
+-- luacheck: globals i_am_a_global
+i_am_a_global = audio.new( 'snd/sounds/jingles/victory.ogg' )
 
 function create ()
    misn.npcAdd( "approach_gauntlet", _("Crimson Gauntlet Terminal"), npc_portrait, npc_description )
