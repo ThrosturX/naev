@@ -1,11 +1,12 @@
 --[[
 <?xml version='1.0' encoding='utf8'?>
 <event name="Naev Needs You!">
-  <location>land</location>
-  <chance>8</chance>
-  <unique />
- </event>
- --]]
+ <location>land</location>
+ <chance>8</chance>
+ <cond>player.credits() &gt; 237451</cond>
+ <unique />
+</event>
+--]]
 --[[
 
 EVENT TITLE: Naev Needs You!
@@ -44,35 +45,30 @@ text[3] = _([["Oh sorry about that. We're working hard on improving life, the un
 
 
 function create()
-      -- Event should only occur if player has played a bit.
-      if player.credits() < 237451 then
-         evt.finish( false)
-      end
-
       -- Create an eerie atmosphere by cutting off the background music and substituting something spooky
       --disabled until difficulties with the music API are sorted out
       music.pause()
       music.play( "sirius1.ogg" )
 
       -- The big programmer in the sky looks in to ask the player a question
-      if tk.yesno( _("Naev received SIGSEGV (address not mapped to object)!"), text[1]) then
-         tk.msg( _("The voice of the creator"), text[2]) -- if the answer is 'yes'
+      if tk.yesno( _("Naev received SIGSEGV (address not mapped to object)!"), text[1] ) then
+         tk.msg( _("The voice of the creator"), text[2] ) -- if the answer is 'yes'
 
      -- Mission ends with a little comment after blasting off.
-         -- hook.takeoff( "enter_system")
+         -- hook.takeoff( "enter_system" )
 
       else
-         tk.msg( _("The voice of the creator"), text[3]) -- if the answer is 'no', not much different from 'yes'
+         tk.msg( _("The voice of the creator"), text[3] ) -- if the answer is 'no', not much different from 'yes'
 
      -- Mission ends with a little comment after blasting off.
-         -- hook.takeoff( "enter_system")
+         -- hook.takeoff( "enter_system" )
       end
 
       -- everything returns to normal
       music.stop()
-      music.choose()
+      music.choose( "land" )
 
-      evt.finish( true)
+      evt.finish( true )
 end
 
 --[[

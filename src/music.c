@@ -60,7 +60,6 @@ static int music_runLua( const char *situation );
  */
 /* music stuff */
 static int music_find (void);
-static void music_free (void);
 /* Lua stuff */
 static int music_luaInit (void);
 static void music_luaQuit (void);
@@ -141,20 +140,8 @@ void music_exit (void)
    if (music_disabled)
       return;
 
-   /* Free the music. */
-   music_free();
-
    /* Clean up Lua. */
    music_luaQuit();
-}
-
-/**
- * @brief Frees the current playing music.
- */
-static void music_free (void)
-{
-   if (music_disabled)
-      return;
 }
 
 /**
@@ -324,7 +311,7 @@ MusicInfo_t* music_info (void)
    }
 
    minfo.playing  = lua_toboolean(naevL,-3);
-   minfo.name     = strdup(luaL_optstring(naevL,-2,NULL));
+   minfo.name     = strdup(luaL_optstring(naevL,-2,""));
    minfo.pos      = luaL_optnumber(naevL,-1,-1);
 
    lua_pop(naevL,3);

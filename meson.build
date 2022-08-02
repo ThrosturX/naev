@@ -22,11 +22,8 @@ copyright_holder = 'Naev Dev Team'
 
 # Tools
 cc = meson.get_compiler('c')
-foreach arg: ['-Wextra', '-Wshadow']
-   if cc.has_argument(arg)
-      add_project_arguments(arg, language : 'c')
-   endif
-endforeach
+c_args = cc.get_supported_arguments(['-Wextra', '-Wshadow'])
+add_project_arguments(c_args, language: 'c')
 
 # Python module checks (For AUTHORS generation and soundtrack generation)
 python_module = import('python')
@@ -194,6 +191,10 @@ if buildExec.disabled() == false
 
    ### Soft deps (required: false)
 
+   # libdl can be used for debugging stack traces. On non-Windows platforms, GLAD relies on dlopen().
+   glad_requires_libdl = not cc.has_header('windows.h')
+   libdl = cc.find_library('dl', required: glad_requires_libdl)
+
    # BFD
    if get_option('debug')
       bfd = cc.find_library('bfd', required: false)
@@ -203,7 +204,6 @@ if buildExec.disabled() == false
    summary('BFD', bfd.found(), section: 'Debug', bool_yn: true)
 
    naev_deps += bfd
-   config_data.set10('HAS_BFD', bfd.found())
 
    # Appstream (Used for generating desktop files and verifying metadata)
    ascli_exe = find_program('appstreamcli', version: '>=0.12.9', required: false)
@@ -217,7 +217,7 @@ if buildExec.disabled() == false
    vorbisfile = dependency('vorbisfile', required: true)
    ogg = dependency('ogg', required: true)  # Transitive dependency. At least some MSYS2 build envs may miss it.
 
-   naev_deps += [openal, ogg, vorbis, vorbisfile]
+   naev_deps += [libdl, openal, ogg, vorbis, vorbisfile]
 
    # Standard library feature tests
    config_data.set10('HAVE_ASPRINTF', cc.has_function('asprintf'))
@@ -226,12 +226,16 @@ if buildExec.disabled() == false
    config_data.set10('HAVE_DECL_GETENV_S', cc.has_header_symbol('stdlib.h', 'getenv_s'))
    config_data.set10('HAVE_FEENABLEEXCEPT', cc.has_header_symbol('fenv.h', 'feenableexcept', prefix: '#define _GNU_SOURCE'))
    config_data.set10('HAVE_ALLOCA_H', cc.has_header('alloca.h'))
+   config_data.set10('HAVE_BFD_H', bfd.found())
+   config_data.set10('HAVE_DLADDR', cc.has_function('dladdr') and libdl.found())
+   config_data.set10('HAVE_EXECINFO_H', cc.has_header('execinfo.h'))
    config_data.set10('HAVE_FENV_H', cc.has_header('fenv.h'))
    config_data.set10('HAVE_MALLOC_H', cc.has_header('malloc.h'))
    config_data.set10('HAVE_STRCASESTR', cc.has_function('strcasestr'))
    # strndup() detectin must work around this bug: https://github.com/mesonbuild/meson/issues/3672
    config_data.set10('HAVE_STRNDUP', cc.has_header_symbol('string.h', 'strndup') and cc.has_function('strndup'))
    config_data.set10('HAVE_STRNSTR', cc.has_function('strnstr'))
+   config_data.set10('HAVE_STRSIGNAL', cc.has_function('strsignal'))
    config_data.set10('HAVE_VASPRINTF', cc.has_function('vasprintf'))
    # BLAS include tests
    cblas_test = '\nint main (void) { double x = 0; return (int)cblas_ddot( 1, &x, 1, &x, 1 ); }'
@@ -264,11 +268,6 @@ if buildExec.disabled() == false
       configuration: config_data
    )
    add_project_arguments('-include', 'config.h', language: 'c')
-
-   # GLAD
-   if not cc.has_header('windows.h')
-      naev_deps += cc.find_library('dl', required: true)
-   endif
 
    include_dirs = [include_directories(
       'src',
