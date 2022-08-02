@@ -56,9 +56,9 @@ end
 
 -- we are about to connect to a server, so we will disable client-side NPC
 -- spawning for the sake of consistency
-client.start = function()
+client.start = function( target )
     client.host = enet.host_create()
-    client.server = host:connect("localhost:6789")
+    client.server = host:connect( target )
     client.playerinfo = { nick = player.name(), ship = player.pilot():ship():nameRaw() }
     client.pilots = {}
     pilot.clear()

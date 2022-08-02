@@ -132,11 +132,14 @@ local function handleMessage ( event )
 end
 
 -- start a new listenserver
-server.start = function()
-    server.host = enet.host_create("localhost:6789")
+server.start = function( port )
+    if not port then port = 6789
+    server.host = enet.host_create( fmt.f( "localhost:{port}", { port = port } ) )
     server.players = {}
     -- TODO HERE: register yourself
     server.world_state = server.refresh()
+
+    server.hook = hook.update("MULTIPLAYER_SERVER_UPDATE")
 end
 
 -- synchronize one player update after receiving
@@ -197,5 +200,7 @@ server.update = function ()
         event = server.host:service()
     end
 end
+
+MULTIPLAYER_SERVER_UPDATE = function() return server.update() end
 
 return server
