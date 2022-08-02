@@ -154,7 +154,7 @@ local escort_params_overwrite = {
 		[ "Enygma Systems Spearhead Launcher"] = 4, ["TeraCom Headhunter Launcher"] = 10, ["Large Shield Booster"] = 2,
 		[ "Shield Capacitor IV"] = 2, ["Biometal Armour"] = 2
    },
-   
+
    -- not too much diversity, but some
    max_same_stru = 2,
    max_same_util = 1,

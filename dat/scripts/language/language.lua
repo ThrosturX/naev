@@ -3,7 +3,7 @@
 local language = {}
 local nouns = {}
 local adjectives = {}
-local descriptors = {}
+--local descriptors = {}
 
 -- helpers
 local function _joined_table(t1, t2)
@@ -501,7 +501,7 @@ adjectives.positive.precious = {
 	_("admired"),
 	_("beautiful"),
 	_("loved"),
-	_("heartwarming"),	
+	_("heartwarming"),
 	_("sentimental"),
 }
 
@@ -521,7 +521,7 @@ adjectives.positive.magical = {
 	_("astonishing"),
 	_("amazing"),
 	_("phenomenal"),
-	_("astounding"),	
+	_("astounding"),
 }
 
 -- dated, but young (but you can't use young for inanimate objects)
@@ -681,7 +681,7 @@ language.getAll = function ( collection )
 			aggregated = _joined_table(aggregated, language.getAll(items))
 		end
 	end
-	
+
 	return aggregated
 end
 
