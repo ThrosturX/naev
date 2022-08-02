@@ -3,19 +3,21 @@ local function unmarshal( player_info )
     local nice_player = {
         id = player_info.id,
 
-        pos = player_info.stats[1],
-        dir = player_info.stats[2],
-        vel = player_info.stats[3],
+        posx = player_info.stats[1],
+        posy = player_info.stats[2],
+        dir = player_info.stats[3],
+        velx = player_info.stats[4],
+        vely = player_info.stats[5],
 
-        armour = player_info.stats[4],
-        shield = player_info.stats[5],
-        stress = player_info.stats[6],
+        armour = player_info.stats[6],
+        shield = player_info.stats[7],
+        stress = player_info.stats[8],
     }
 
     return nice_player
 end
 
-local common
+local common = {}
 common.REQUEST_KEY      = "IDENTIFY"
 common.REQUEST_UPDATE   = "SYNC_PILOTS"
 common.RECEIVE_UPDATE   = "UPDATE"
@@ -27,7 +29,7 @@ common.receivers = {}
 --  Receive confirmation of server registration
 --  REGISTERED <newname>
 --]]
-common.receivers[REGISTRATION_KEY] = function ( client, message )
+common.receivers[common.REGISTRATION_KEY] = function ( client, message )
     if message and #message == 1 then
         client.playerinfo.nick = message[1]
         print("YOU HAVE BEEN REGISTERED AS <" .. client.playerinfo.nick .. ">.")

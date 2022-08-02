@@ -16,7 +16,7 @@ local server = {}
 local names = {}
 -- make sure a name is unique by adding random numbers until it is
 local function shorten( name )
-    local newname = name:substr(1, math.min(name:len(), 16))
+    local newname = name:sub(1, math.min(name:len(), 16))
     if names[name] then
         newname = shorten( newname .. tostring(rnd.rnd(1,999)) )
     end
@@ -37,14 +37,14 @@ local function registerPlayer( playernicksuggest, shiptype)
         nil, "Multiplayer", "Multiplayer",
         { ai = "dummy", clear_allies = true, clear_enemies = true }
     )
-    local random_spawn_point = vec3.new( rnd.rnd(-4000, 4000), rnd.rnd(-6000, 6000) )
+    local random_spawn_point = vec2.new( rnd.rnd(-4000, 4000), rnd.rnd(-6000, 6000) )
     -- spawn the pilot server-side
     server.players[playerID] = pilot.add(
         shiptype,
         mplayerfaction,
         random_spawn_point,
-        playerID,
-        -- { naked = true }
+        playerID
+        --, { naked = true }
     )
 
     return playerID
@@ -74,14 +74,14 @@ MESSAGE_HANDLERS[common.REQUEST_KEY] = function ( peer, data )
             return
         end
      end
-    peer:send("ERROR: Unsupported operation.")
+    peer:send("ERROR: Unsupported operation 1.")
 end
 
 -- player wants to sync
 MESSAGE_HANDLERS[common.REQUEST_UPDATE] = function ( peer, data )
     -- peer just wants an updated world state
     if #data >= 1 then
-        local player_id = data[1]:match( "%w" )
+        local player_id = data[1]:match( "%w+" )
         if player_id and names[player_id] then
             -- update pilots
             local known_pilots = {}
@@ -111,16 +111,23 @@ MESSAGE_HANDLERS[common.REQUEST_UPDATE] = function ( peer, data )
 
             -- send this player the requested world state
             sendMessage( peer, common.RECEIVE_UPDATE, server.world_state )
+            return
         end
     end
-    peer:send( "ERROR: Unsupported operation." )
+    --[[
+    peer:send( "ERROR: Unsupported operation 2." )
+    for k,v in pairs(data) do
+        print(tostring(k) .. ": " .. tostring(v))
+    end
+    --]]
 end
 
 local function handleMessage ( event )
     print("Got message: ", event.data, event.peer)
     local msg_type
     local msg_data = {}
-    for line in event.data:gmatch("[^\n+") do
+    for line in event.data:gmatch("[^\n]+") do
+        print("LINE: " .. line)
         if not msg_type then
             msg_type = line
         else
@@ -128,15 +135,21 @@ local function handleMessage ( event )
         end
     end
 
+    print("MESSAGE IS A: <" .. msg_type .. ">")
+
     return MESSAGE_HANDLERS[msg_type]( event.peer, msg_data)
 end
 
 -- start a new listenserver
 server.start = function( port )
-    if not port then port = 6789
+    if not port then port = 6789 end
     server.host = enet.host_create( fmt.f( "localhost:{port}", { port = port } ) )
     server.players = {}
-    -- TODO HERE: register yourself
+    -- go to multiplayer system
+    player.teleport("Crimson Gauntlet")
+    -- register yourself
+    registerPlayer( player.name(), player:pilot():ship():nameRaw() )
+    -- update world state with yourself (weird)
     server.world_state = server.refresh()
 
     server.hook = hook.update("MULTIPLAYER_SERVER_UPDATE")
@@ -186,10 +199,10 @@ server.update = function ()
         if event.type == "receive" then
             handleMessage( event )
         elseif event.type == "connect" then
-            print(event.peer .. " connected.")
+            print(event.peer, " connected.")
             -- reserve an ID? nah...
         elseif event.type == "disconnect" then
-            print(event.peer .. " disconnected.")
+            print(event.peer, " disconnected.")
             -- TODO: clean up
         else
             print(fmt.f("Received unknown event <{type}> from {peer}:", event))

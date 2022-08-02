@@ -2,31 +2,6 @@ local common = require "multiplayer.common"
 local enet = require "enet"
 local fmt = require "format"
 
--- converts a world_state into information about "me" and a list of players I know about
---[[
---      my_player_id <my_stats>
---      other_player_id
---      ...
---]]
-local function _marshal ( players_info )
-    local armour, shield, stress = player.pilot():health()
-    local message = fmt.f("{id} {pos} {dir} {vel} {armour} {shield} {stress}", 
-        {
-            id = client.playerinfo.nick,
-            pos = player.pilot():pos(),
-            dir = player.pilot():dir(),
-            vel = player.pilot():vel(),
-            armour = armour,
-            shield = shield,
-            stress = stress
-        }
-    )
-    for opid, _opplt in pairs(players_info) do
-        message = message .. '\n' .. tostring(opid)
-    end
-    return message
-end
-
 local client = {}
 --[[
 --      client.host
@@ -40,6 +15,36 @@ local client = {}
 --      client.update()
 --]]
 
+-- converts a world_state into information about "me" and a list of players I know about
+--[[
+--      my_player_id <my_stats>
+--      other_player_id
+--      ...
+--]]
+
+local function _marshal ( players_info )
+    local armour, shield, stress = player.pilot():health()
+    local velx, vely = player.pilot():vel():get()
+    local posx, posy = player.pilot():pos():get()
+    local message = fmt.f("{id} {posx} {posy} {dir} {velx} {vely} {armour} {shield} {stress}", 
+        {
+            id = client.playerinfo.nick,
+            posx = posx,
+            posy = posy,
+            dir = player.pilot():dir(),
+            velx = velx,
+            vely = vely,
+            armour = armour,
+            shield = shield,
+            stress = stress
+        }
+    )
+    for opid, _opplt in pairs(players_info) do
+        message = message .. '\n' .. tostring(opid)
+    end
+    return message
+end
+
 local function receiveMessage( message )
     local msg_type
     local msg_data = {}
@@ -51,14 +56,16 @@ local function receiveMessage( message )
         end
     end
 
+    print("CLIENT RECEIVES: " .. msg_type )
     return common.receivers[msg_type]( client, msg_data )
 end
 
 -- we are about to connect to a server, so we will disable client-side NPC
 -- spawning for the sake of consistency
-client.start = function( target )
-    client.host = enet.host_create()
-    client.server = host:connect( target )
+client.start = function( bindaddr, bindport, localport )
+    if not localport then localport = rnd.rnd(1234,6788) end
+    client.host = enet.host_create("localhost:" .. tostring(localport))
+    client.server = client.host:connect( fmt.f("{addr}:{port}", { addr = bindaddr, port = bindport } ) )
     client.playerinfo = { nick = player.name(), ship = player.pilot():ship():nameRaw() }
     client.pilots = {}
     pilot.clear()
@@ -67,7 +74,7 @@ client.start = function( target )
     hook.timer(1, "enterMultiplayer")
 end
 
-local MY_SPAWN_POINT = vec3.new( rnd.rnd(-2000, 2000), rnd.rnd(-2000, 2000) )
+local MY_SPAWN_POINT = vec2.new( rnd.rnd(-2000, 2000), rnd.rnd(-2000, 2000) )
 -- TODO: Support outfits
 client.spawn = function( playerid, shiptype, shipname )
     local mplayerfaction = faction.dynAdd(
@@ -105,21 +112,21 @@ end
 
 client.update = function()
     -- tell the server what we know and ask for resync
-    client.server:send( common.REQUEST_UPDATE, _marshal( client.pilots ) )
+    client.server:send( common.REQUEST_UPDATE .. '\n' .. _marshal( client.pilots ) )
     --
     -- get updates
-    local event = host:service(100)
+    local event = client.host:service(100)
     while event do
         if event.type == "receive" then
             print("Got message: ", event.data, event.peer)
             -- update world state or whatever the server asks
             receiveMessage( event.data )
         elseif event.type == "connect" then
-            print(event.peer .. " connected.")
+            print(event.peer, " connected.")
             -- register with the server
-            event.peer:send( common.REQUEST_KEY .. '\n' .. client.playerinfo.nick )
+--            event.peer:send( common.REQUEST_KEY .. '\n' .. client.playerinfo.nick )
         elseif event.type == "disconnect" then
-            print(event.peer .. " disconnected.")
+            print(event.peer, " disconnected.")
             -- TODO: cleanup
         else
             print(fmt.f("Received unknown event <{type}> from {peer}:", event))
@@ -137,9 +144,11 @@ function enterMultiplayer()
     client.server:send(
         fmt.f(
             "{key}\n{nick}\n{ship}",
-            key = common.REQUEST_KEY,
-            nick = client.playerinfo.nick,
-            ship = client.playerinfo.ship
+            {
+                key = common.REQUEST_KEY,
+                nick = client.playerinfo.nick,
+                ship = client.playerinfo.ship
+            }
         )
     )
     client.hook = hook.update("MULTIPLAYER_CLIENT_UPDATE")
