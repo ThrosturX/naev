@@ -465,12 +465,16 @@ static int nlua_loadBasic( lua_State* L )
    luaL_register(L, "gettext", gettext_methods);
 
    /* Sandbox "io" and "os". */
-   lua_newtable(L); /* io table */
-   lua_setglobal(L,"io");
-   lua_newtable(L); /* os table */
-   lua_pushcfunction(L, nlua_os_getenv);
-   lua_setfield(L,-2,"getenv");
-   lua_setglobal(L,"os");
+   if (conf.sandbox_io) {
+      lua_newtable(L); /* io table */
+      lua_setglobal(L,"io");
+   }
+   if (conf.sandbox_os) {
+      lua_newtable(L); /* os table */
+      lua_pushcfunction(L, nlua_os_getenv);
+      lua_setfield(L,-2,"getenv");
+      lua_setglobal(L,"os");
+   }
 
    /* Special math functions function. */
    lua_getglobal(L,"math");

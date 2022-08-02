@@ -148,6 +148,8 @@ void conf_setDefaults (void)
    conf.devmode      = 0;
    conf.devautosave  = 0;
    conf.lua_repl     = 0;
+   conf.sandbox_io   = 1;
+   conf.sandbox_os   = 1;
    conf.lastversion = strdup( "" );
    conf.translation_warning_seen = 0;
 
@@ -404,6 +406,8 @@ int conf_loadConfig ( const char* file )
       conf_loadBool( lEnv, "devmode", conf.devmode );
       conf_loadBool( lEnv, "devautosave", conf.devautosave );
       conf_loadBool( lEnv, "lua_repl", conf.lua_repl );
+      conf_loadBool( lEnv, "sandbox_io", conf.sandbox_io );
+      conf_loadBool( lEnv, "sandbox_os", conf.sandbox_os );
       conf_loadBool( lEnv, "conf_nosave", conf.nosave );
       conf_loadString( lEnv, "lastversion", conf.lastversion );
       conf_loadBool( lEnv, "translation_warning_seen", conf.translation_warning_seen );
@@ -1040,6 +1044,11 @@ int conf_saveConfig ( const char* file )
 
    conf_saveComment(_("Enable the experimental CLI based on lua-repl."));
    conf_saveBool("lua_repl",conf.lua_repl);
+   conf_saveEmptyLine();
+
+   conf_saveComment(_("Avoid exposing dangerous functionality to Lua scripts."));
+   conf_saveBool("sandbox_io",conf.sandbox_io);
+   conf_saveBool("sandbox_os",conf.sandbox_os);
    conf_saveEmptyLine();
 
    conf_saveComment(_("Save the config every time game exits (rewriting this bit)"));
