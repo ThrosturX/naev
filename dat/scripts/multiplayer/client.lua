@@ -133,7 +133,15 @@ end
 
 function enterMultiplayer()
     player.teleport("Crimson Gauntlet")
-    -- TODO HERE: register with the server!
+    -- register with the server
+    client.server:send(
+        fmt.f(
+            "{key}\n{nick}\n{ship}",
+            key = common.REQUEST_KEY,
+            nick = client.playerinfo.nick,
+            ship = client.playerinfo.ship
+        )
+    )
     client.hook = hook.update("MULTIPLAYER_CLIENT_UPDATE")
 end
 

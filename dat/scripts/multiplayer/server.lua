@@ -25,14 +25,27 @@ local function shorten( name )
 end
 
 -- registers a player, returns the players unique ID
-local function registerPlayer( playernicksuggest )
+local function registerPlayer( playernicksuggest, shiptype)
     if names[playernicksuggest] then
         -- prevent double registration
           return nil
     end
     -- create a unique registration ID
     local playerID = shorten( playernicksuggest )
-    server.players[playerID] = {}
+
+    local mplayerfaction = faction.dynAdd(
+        nil, "Multiplayer", "Multiplayer",
+        { ai = "dummy", clear_allies = true, clear_enemies = true }
+    )
+    local random_spawn_point = vec3.new( rnd.rnd(-4000, 4000), rnd.rnd(-6000, 6000) )
+    -- spawn the pilot server-side
+    server.players[playerID] = pilot.add(
+        shiptype,
+        mplayerfaction,
+        random_spawn_point,
+        playerID,
+        -- { naked = true }
+    )
 
     return playerID
 end
@@ -52,9 +65,9 @@ local MESSAGE_HANDLERS = {}
 
 -- player wants to join the server
 MESSAGE_HANDLERS[common.REQUEST_KEY] = function ( peer, data )
-    -- peer wants to register as <data>[1]
-    if data and #data == 1 then
-        local player_id = registerPlayer(data[1])
+    -- peer wants to register as <data>[1] in <data>[2]
+    if data and #data == 2 then
+        local player_id = registerPlayer(data[1], data[2])
         if player_id then
             -- ACK: REGISTERED <player_id>
             sendMessage( peer, common.REGISTRATION_KEY, player_id )
@@ -106,7 +119,7 @@ end
 local function handleMessage ( event )
     print("Got message: ", event.data, event.peer)
     local msg_type
-    local msg_data
+    local msg_data = {}
     for line in event.data:gmatch("[^\n+") do
         if not msg_type then
             msg_type = line
