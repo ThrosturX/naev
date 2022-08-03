@@ -1,4 +1,4 @@
--- luacheck: globals MULTIPLAYER_SERVER_UPDATE (ook functions passed by name)
+-- luacheck: globals MULTIPLAYER_CLIENT_UPDATE (ook functions passed by name)
 --
 local common = require "multiplayer.common"
 local enet = require "enet"
@@ -160,7 +160,7 @@ server.start = function( port )
     -- update world state with yourself (weird)
     server.world_state = server.refresh()
 
-    server.hook = hook.update("MULTIPLAYER_SERVER_UPDATE")
+    server.hook = hook.update("MULTIPLAYER_CLIENT_UPDATE")
 end
 
 -- synchronize one player update after receiving
@@ -233,6 +233,6 @@ server.update = function ()
     end
 end
 
-MULTIPLAYER_SERVER_UPDATE = function() return server.update() end
+MULTIPLAYER_CLIENT_UPDATE = function() return server.update() end
 
 return server

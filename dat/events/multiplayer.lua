@@ -12,7 +12,6 @@
 
    This event runs constantly in the background and manages MULTIPLAYER!!!
 --]]
-local fmt = require "format"
 local mplayerclient = require "multiplayer.client"
 local mplayerserver = require "multiplayer.server"
 -- luacheck: globals load (Hook functions passed by name)
@@ -35,7 +34,7 @@ local function startMultiplayerServer()
 end
 
 local function connectMultiplayer()
-    local target
+    local target = nil
     --[[
     local hostname = tk.input("Connect", 3, 32, "HOSTNAME")
     local hostport = tk.input("Connect", 3, 32, "PORT")
