@@ -1,3 +1,5 @@
+-- luacheck: globals MULTIPLAYER_SERVER_UPDATE (ook functions passed by name)
+--
 local common = require "multiplayer.common"
 local enet = require "enet"
 local fmt = require "format"
