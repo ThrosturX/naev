@@ -1,18 +1,26 @@
+local fmt = require "format"
+
 --  each line is <player_id> <pos> <dir> <vel> <armour> <shield> <stress>
 local function unmarshal( player_info )
     local nice_player = {
         id = player_info.id,
 
-        posx = player_info.stats[1],
-        posy = player_info.stats[2],
-        dir = player_info.stats[3],
-        velx = player_info.stats[4],
-        vely = player_info.stats[5],
+        posx = player_info.stats[2],
+        posy = player_info.stats[3],
+        dir = player_info.stats[4],
+        velx = player_info.stats[5],
+        vely = player_info.stats[6],
 
-        armour = player_info.stats[6],
-        shield = player_info.stats[7],
-        stress = player_info.stats[8],
+        armour = player_info.stats[7],
+        shield = player_info.stats[8],
+        stress = player_info.stats[9],
     }
+
+    print("UNMARSHALED A PLAYER INTO THIS:")
+    for k, v in pairs(nice_player) do
+        print("\t" .. tostring(k) .. ": " .. tostring(v))
+    end
+   print("____________________")
 
     return nice_player
 end
@@ -32,6 +40,7 @@ common.receivers = {}
 common.receivers[common.REGISTRATION_KEY] = function ( client, message )
     if message and #message == 1 then
         client.playerinfo.nick = message[1]
+        client.registered = true
         print("YOU HAVE BEEN REGISTERED AS <" .. client.playerinfo.nick .. ">.")
     else
         print("FAILED TO REGISTER:")
@@ -53,6 +62,17 @@ common.receivers[common.ADD_PILOT] = function ( client, message )
     end
 end
 
+local function parsePlayer( player_line )
+    local this_player = {}
+    this_player.stats = {}
+    -- get the player id
+    this_player.id = player_line:match("%w+")
+    for playerstat in player_line:gmatch("%w+") do
+        table.insert( this_player.stats, playerstat )
+    end
+    return this_player
+end
+
 --[[
 --  Receive an update about the world state
 --  each line is <player_id> <pos> <dir> <vel> <armour> <shield> <stress>
@@ -60,18 +80,36 @@ end
 common.receivers[common.RECEIVE_UPDATE] = function ( client, message )
     local world_state = {}
     world_state.players = {}
-    for _, player_line in ipairs(message) do
-        local this_player = {}
-        this_player.stats = {}
-        -- get the player id
-        this_player.id = player_line:match("%w")
-        for playerstat in player_line:gmatch("%d") do
-            table.insert(this_player.stats, playerstat)
-        end
-        table.insert(world_state.players, unmarshal(this_player))
+    for _, player_line in ipairs( message ) do
+        local this_player = parsePlayer( player_line )
+        table.insert( world_state.players, unmarshal( this_player ) )
     end
 
     return client.synchronize( world_state )
+end
+
+common.unmarshal = function ( input )
+    return unmarshal( parsePlayer( input ) )
+end
+
+common.marshal_me = function( ident )
+    local armour, shield, stress = player.pilot():health()
+    local velx, vely = player.pilot():vel():get()
+    local posx, posy = player.pilot():pos():get()
+    local message = fmt.f("{id} {posx} {posy} {dir} {velx} {vely} {armour} {shield} {stress}",
+        {
+            id = ident,
+            posx = posx,
+            posy = posy,
+            dir = player.pilot():dir(),
+            velx = velx,
+            vely = vely,
+            armour = armour,
+            shield = shield,
+            stress = stress
+        }
+    )
+    return message
 end
 
 return common
