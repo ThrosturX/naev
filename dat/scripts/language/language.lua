@@ -111,6 +111,7 @@ nouns.facilities.cruiser = {
 -- nouns to describe some actor
 nouns.actors = {}
 nouns.actors.animals = {}
+nouns.actors.animals.mammals = {}
 nouns.actors.animals.mammals.domestic = {
 	_("cat"),
 	_("dog"),
