@@ -26,6 +26,7 @@
 #include "log.h"
 #include "music.h"
 #include "ndata.h"
+#include "nfile.h"
 #include "nstring.h"
 #include "player.h"
 #include "plugin.h"
@@ -172,7 +173,7 @@ static void opt_OK( unsigned int wid, const char *str )
    ret |= opt_videoSave(    opt_windows[ OPT_WIN_VIDEO ], str);
 
    if (opt_restart && !prompted_restart)
-      dialogue_msgRaw( _("Warning"), _("#rRestart Naev for changes to take effect.#0") );
+      dialogue_msg( _("Warning"), "#r%s#0", _("Restart Naev for changes to take effect.") );
 
    /* Close window if no errors occurred. */
    if (!ret) {
@@ -256,7 +257,6 @@ static void opt_gameplay( unsigned int wid )
 {
    (void) wid;
    char buf[STRMAX];
-   char **paths;
    int cw;
    int w, h, y, x, by, l, n, i, p;
    const char *s;
@@ -285,18 +285,8 @@ static void opt_gameplay( unsigned int wid )
          NULL, NULL, naev_version(1) );
    y -= 20;
 
-   paths = PHYSFS_getSearchPath();
-   for (i=l=0; paths[i]!=NULL && (size_t)l < sizeof(buf); i++)
-   {
-      if (i == 0)
-         l = scnprintf( buf, sizeof(buf), _("ndata: %s"), paths[i] );
-      else
-         l += scnprintf( &buf[l], sizeof(buf)-l, ":%s", paths[i] );
-   }
-   PHYSFS_freeList(paths);
-   paths = NULL;
-   window_addText( wid, x, y, cw, 20, 1, "txtNdata",
-         NULL, NULL, buf );
+   snprintf( buf, sizeof(buf), "#n%s#0%s"CONF_FILE, _("Config Path: "), nfile_configPath() );
+   window_addText( wid, x, y, cw, 20, 1, "txtConfPath", NULL, NULL, buf );
    y -= 40;
    by = y;
 
@@ -318,7 +308,7 @@ static void opt_gameplay( unsigned int wid )
          i = 0;
    }
    window_addList( wid, x+l+20, y, cw-l-50, 100, "lstLanguage", ls, n, i, NULL, NULL );
-   y -= 120;
+   y -= 110;
 
    /* Game difficulty. */
    difficulty = difficulty_getAll();
@@ -349,7 +339,7 @@ static void opt_gameplay( unsigned int wid )
    /* Compilation flags. */
    window_addText( wid, x, y, cw, 20, 0, "txtCompile",
          NULL, cHeader, _("Compilation Flags:") );
-   y -= 30;
+   y -= 20;
    window_addText( wid, x, y, cw, h+y-20, 0, "txtFlags",
          NULL, &cFontOrange,
          ""
@@ -1783,7 +1773,7 @@ static void opt_setMapOverlayOpacity( unsigned int wid, const char *str )
 static void opt_plugins( unsigned int wid )
 {
    int w, h, lw, lh, bw, bh, n;
-   char **str;
+   char **str, buf[STRMAX_SHORT];
    const plugin_t *plgs = plugin_list();
 
    /* Get dimensions. */
@@ -1791,14 +1781,16 @@ static void opt_plugins( unsigned int wid )
    bh = BUTTON_HEIGHT;
    window_dimWindow( wid, &w, &h );
    lw = w - bw - 100;
-   lh = h - 60;
+   lh = h - 90;
 
    /* Close button. */
    window_addButton( wid, -20, 20, bw, bh,
          "btnClose", _("OK"), opt_OK );
 
    /* Text stuff. */
-   window_addText( wid, -20, -40, w-(20+lw+20+20), h-100,
+   snprintf( buf, sizeof(buf), "#n%s#0%s%s", _("Plugins Directory: "), PHYSFS_getRealDir("plugins"), "plugins" );
+   window_addText( wid, 20, -30, w-40, 30, 1, "txtPath", NULL, NULL, buf );
+   window_addText( wid, -20, -70, w-(20+lw+20+20), h-100,
          0, "txtDesc", NULL, NULL, NULL );
 
    /* Create the list. */
@@ -1814,7 +1806,7 @@ static void opt_plugins( unsigned int wid )
          str[i] = strdup( plugin_name(&plgs[i]) );
    }
 
-   window_addList( wid, 20, -40, lw, lh, "lstPlugins", str, n, 0, opt_plugins_update, NULL );
+   window_addList( wid, 20, -70, lw, lh, "lstPlugins", str, n, 0, opt_plugins_update, NULL );
 }
 
 static void opt_plugins_update( unsigned int wid, const char *name )

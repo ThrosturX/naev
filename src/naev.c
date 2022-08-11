@@ -95,7 +95,6 @@
 #include "unidiff.h"
 #include "weapon.h"
 
-#define CONF_FILE       "conf.lua" /**< Configuration file by default. */
 #define VERSION_FILE    "VERSION" /**< Version file by default. */
 
 static int quit               = 0; /**< For primary loop */
@@ -766,6 +765,9 @@ void naev_resize (void)
    toolkit_reposition();
    menu_main_resize();
    nebu_resize();
+
+   /* Lua stuff. */
+   nlua_resize();
 
    /* Finally do a render pass to avoid half-rendered stuff. */
    render_all( 0., 0. );

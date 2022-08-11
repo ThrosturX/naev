@@ -259,6 +259,10 @@ dat/outfits/fighter_bays/zalek_heavy_drone_mini_bay.xml
 dat/outfits/fighter_bays/zalek_light_drone_bay.xml
 dat/outfits/fighter_bays/zalek_light_drone_mini_bay.xml
 dat/outfits/intrinsic/gauntlet_deluxe.xml
+dat/outfits/intrinsic/machiavellian_fortune.xml
+dat/outfits/intrinsic/machiavellian_necessity.xml
+dat/outfits/intrinsic/machiavellian_virtue.xml
+dat/outfits/intrinsic/port_and_polish.xml
 dat/outfits/launchers/convulsion_launcher.xml
 dat/outfits/launchers/electron_burst_cannon.xml
 dat/outfits/launchers/emp_grenade_launcher.xml
@@ -2633,6 +2637,7 @@ dat/missions/dvaered/gauntlet/gui.lua
 dat/missions/dvaered/gauntlet/tables.lua
 dat/missions/dvaered/recruitment/dv_census.lua
 dat/missions/dvaered/recruitment/dv_census_00.lua
+dat/missions/dvaered/recruitment/dv_goddard.lua
 dat/missions/dvaered/recruitment/dv_intelligence.lua
 dat/missions/dvaered/recruitment/dv_lostagent.lua
 dat/missions/dvaered/recruitment/dv_propaganda.lua
@@ -2717,6 +2722,8 @@ dat/missions/neutral/patrol.lua
 dat/missions/neutral/pirbounty_alive.lua
 dat/missions/neutral/pirbounty_dead.lua
 dat/missions/neutral/poi.lua
+dat/missions/neutral/poi/caretaker.lua
+dat/missions/neutral/poi/data_intro.lua
 dat/missions/neutral/poi/nebula_crystals.lua
 dat/missions/neutral/poi/proteron_agent.lua
 dat/missions/neutral/poi/soromid_biologist.lua

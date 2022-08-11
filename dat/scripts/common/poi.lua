@@ -282,6 +282,17 @@ function poi.vn_soundonly( id, params )
          tmerge( {image=c, flip=false}, params ) )
 end
 
+local noise_list = {
+   _("*CRACKLE*"),
+   _("*HISS*"),
+   _("*CLICK*"),
+   _("*RASPING*"),
+   _("*NOISE*"),
+}
+function poi.noise ()
+   return noise_list[ rnd.rnd(1,#noise_list) ]
+end
+
 --[[--
 Logs a point of interest message.
    @tparam string msg Message to log.
@@ -343,6 +354,15 @@ Takes data to the player.
 --]]
 function poi.data_take( amount )
    return player.inventoryRm( conduit, amount )
+end
+
+--[[
+Returns a human-readable string for an amount of data.
+   @tparam integer amount Amount of data to convert to string.
+   @treturn string Human-readable string corresponding to the amount of data.
+--]]
+function poi.data_str( amount )
+   return fmt.f(n_("{amount} Encrypted Data Matrix","{amount} Encrypted Data Matrices",amount),{amount=amount})
 end
 
 return poi
