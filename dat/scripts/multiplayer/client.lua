@@ -134,7 +134,7 @@ client.start = function( bindaddr, bindport, localport )
     client.playerinfo = {
         nick = player.name():gsub(' ', ''),
         ship = player_ship,
-        outfits = common.marshal_outfits(player.pilot():outfits())
+        outfits = common.marshal_outfits(player.pilot():outfitsList())
     }
 end
 

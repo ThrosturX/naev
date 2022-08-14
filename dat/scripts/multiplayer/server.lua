@@ -180,7 +180,7 @@ MESSAGE_HANDLERS[common.REQUEST_UPDATE] = function ( peer, data )
                            {
                                opid = opid,
                                ship_type = opplt:ship():nameRaw(),
-                               outfits = common.marshal_outfits( opplt:outfits() ),
+                               outfits = common.marshal_outfits( opplt:outfitsList() ),
                            }
                        )
                        if server.npcs[opid] then
@@ -266,7 +266,7 @@ server.start = function( port )
         player.teleport("Somal's Ship Cemetery")
         -- register yourself
         server.hostnick = player.name():gsub(' ', '')
-        registerPlayer( server.hostnick, player:pilot():ship():nameRaw() , player:pilot():outfits() )
+        registerPlayer( server.hostnick, player:pilot():ship():nameRaw() , player:pilot():outfitsList() )
         -- update world state with yourself (weird)
         server.world_state = server.refresh()
 
