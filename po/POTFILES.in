@@ -80,6 +80,7 @@ dat/effects/wormhole_enter.xml
 dat/effects/wormhole_exit.xml
 dat/factions/achack_sirius.xml
 dat/factions/achack_thugs.xml
+dat/factions/affiliated.xml
 dat/factions/associates.xml
 dat/factions/black_lotus.xml
 dat/factions/collective.xml
@@ -259,6 +260,7 @@ dat/outfits/fighter_bays/zalek_heavy_drone_bay.xml
 dat/outfits/fighter_bays/zalek_heavy_drone_mini_bay.xml
 dat/outfits/fighter_bays/zalek_light_drone_bay.xml
 dat/outfits/fighter_bays/zalek_light_drone_mini_bay.xml
+dat/outfits/intrinsic/escort_bonus.xml
 dat/outfits/intrinsic/gauntlet_deluxe.xml
 dat/outfits/intrinsic/machiavellian_fortune.xml
 dat/outfits/intrinsic/machiavellian_necessity.xml
@@ -2428,6 +2430,7 @@ dat/ai/empire_idle.lua
 dat/ai/empire_norun.lua
 dat/ai/empire_refuel.lua
 dat/ai/escort.lua
+dat/ai/escort_guardian.lua
 dat/ai/escort_player.lua
 dat/ai/feralbioship.lua
 dat/ai/flee.lua
@@ -2492,6 +2495,7 @@ dat/effects/lua/wormhole_exit.lua
 dat/events/bioship.lua
 dat/events/chapter1.lua
 dat/events/cinematic/DvdFLFbattle.lua
+dat/events/companions.lua
 dat/events/dev/system_tour.lua
 dat/events/discovery.lua
 dat/events/dvaered/fwA_treason.lua
@@ -2551,6 +2555,7 @@ dat/events/pirate/fake_transponder.lua
 dat/events/pirate/shipcheck.lua
 dat/events/proteron/blockade.lua
 dat/events/restricted.lua
+dat/events/scavenger_event.lua
 dat/events/shipai.lua
 dat/events/shiplog.lua
 dat/events/sirius/achack04.lua
@@ -2568,6 +2573,7 @@ dat/events/wormhole.lua
 dat/events/zalek/sigma13.lua
 dat/factions/equip/dvaered.lua
 dat/factions/equip/empire.lua
+dat/factions/equip/escort.lua
 dat/factions/equip/generic.lua
 dat/factions/equip/miner.lua
 dat/factions/equip/pirate.lua
@@ -2908,6 +2914,7 @@ dat/scripts/equipopt/outfits.lua
 dat/scripts/equipopt/params.lua
 dat/scripts/equipopt/templates/dvaered.lua
 dat/scripts/equipopt/templates/empire.lua
+dat/scripts/equipopt/templates/escort.lua
 dat/scripts/equipopt/templates/generic.lua
 dat/scripts/equipopt/templates/pirate.lua
 dat/scripts/equipopt/templates/proteron.lua
@@ -2928,6 +2935,7 @@ dat/scripts/factions/zalek.lua
 dat/scripts/fleet.lua
 dat/scripts/format.lua
 dat/scripts/formation.lua
+dat/scripts/language/language.lua
 dat/scripts/lazyload.lua
 dat/scripts/linenoise.lua
 dat/scripts/lmisn.lua
@@ -2993,6 +3001,7 @@ dat/scripts/pilotai.lua
 dat/scripts/pilotname.lua
 dat/scripts/pilotname/core.lua
 dat/scripts/pilotname/generic.lua
+dat/scripts/pilotname/human.lua
 dat/scripts/pilotname/pirate.lua
 dat/scripts/pilotname/utility.lua
 dat/scripts/playerform.lua
