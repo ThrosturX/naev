@@ -294,7 +294,9 @@ server.synchronize_player = function( player_info_str )
             server.players[ppid]:pos()
         )
         local stats = server.players[ppid]:stats()
-        if dist2 >= stats.speed_max * (stats.speed_max + 96) then
+        local fudge = 4
+        local speed2 = math.min(stats.speed_max * stats.speed_max, math.abs(ppinfo.posx + fudge * ppinfo.posy + fudge))
+        if dist2 >= speed2 then
             print("WARNING: Refusing to synchronize player " .. ppid)
             server.players[ppid]:setHealth(ppinfo.armour - 1, ppinfo.shield, ppinfo.stress + 1)
             common.sync_player( ppid, ppinfo, server.players )
