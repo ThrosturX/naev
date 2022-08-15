@@ -167,6 +167,13 @@ client.spawn = function( ppid, shiptype, shipname , outfits, ai )
         print("created pilot for " .. tostring(ppid))
     elseif ppid == client.playerinfo.nick then
         client.pilots[ppid] = player.pilot()
+        -- the server tells us to spawn in a new ship or acknowledges this ship
+        local mpshiplabel = "MPSHIP" .. tostring(rnd.rnd(10000, 99999)) .. shipname
+        local mplayership = player.addShip(shiptype, mpshiplabel, "Multiplayer", true)
+        player.swapShip( mpshiplabel, false, false )
+        for _i, outf in ipairs(outfits) do
+            player.pilot():outfitAdd(outf, 1, true)
+        end
     else
         print("WARNING: Trying to add already existing pilot: " .. tostring(ppid))
     end
@@ -279,7 +286,7 @@ local function tryRegister( nick )
     )
 end
 
-local soft_resync = 0
+local soft_sync = 0
 client.update = function( timeout )
     timeout = timeout or 0
     player.cinematics(
@@ -330,12 +337,12 @@ client.update = function( timeout )
         event = client.host:service()
     end
     
-    if soft_resync > 12 then
+    if soft_sync > 36 then
         -- tell the server what we know and ask for next resync
         client.server:send( common.REQUEST_UPDATE .. '\n' .. _marshal( client.pilots ) )
-        soft_resync = 0
+        soft_sync = 0
     else
-        soft_resync = soft_resync + 1
+        soft_sync = soft_sync + 1
     end
 end
 
@@ -409,6 +416,7 @@ function MULTIPLAYER_CLIENT_INPUT ( inputname, inputpress, args)
     if MP_INPUT_HANDLERS[inputname] then
         MP_INPUT_HANDLERS[inputname]( inputpress, args )
     end
+    soft_sync = 999
 end
 
 return client
