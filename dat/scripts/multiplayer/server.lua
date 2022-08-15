@@ -56,7 +56,7 @@ local ships = {
     "Empire Admonisher"
 }
 
-local MAX_NPCS = 8
+local MAX_NPCS = 1
 -- spawn an NPC
 local function createNpc( shiptype )
     local count = 0
