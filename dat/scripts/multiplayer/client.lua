@@ -279,6 +279,7 @@ local function tryRegister( nick )
     )
 end
 
+local soft_resync = 0
 client.update = function( timeout )
     timeout = timeout or 0
     player.cinematics(
@@ -329,8 +330,13 @@ client.update = function( timeout )
         event = client.host:service()
     end
     
-    -- tell the server what we know and ask for next resync
-    client.server:send( common.REQUEST_UPDATE .. '\n' .. _marshal( client.pilots ) )
+    if soft_resync > 12 then
+        -- tell the server what we know and ask for next resync
+        client.server:send( common.REQUEST_UPDATE .. '\n' .. _marshal( client.pilots ) )
+        soft_resync = 0
+    else
+        soft_resync = soft_resync + 1
+    end
 end
 
 function reconnect()
