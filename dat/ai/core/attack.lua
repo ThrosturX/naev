@@ -48,14 +48,34 @@ function atk.think( target, si )
 
    -- Use special outfits
    if mem._o then
+      local p = ai.pilot()
+
       -- Use shield booster if applicable
       if mem._o.shield_booster then
-         local p = ai.pilot()
          local _a, s = p:health()
          local e = p:energy()
          if s < 50 and e > 20 then
             p:outfitToggle( mem._o.shield_booster, true )
          end
+      end
+
+      -- Jam stuff
+      if mem._o.jammer and ai.haslockon() then
+         if p:energy() > 40 then
+            p:outfitToggle( mem._o.jammer, true )
+         end
+      end
+
+      -- Accelerate time
+      if mem._o.neural_interface then
+         if p:energy() > 20 then
+            p:outfitToggle( mem._o.neural_interface, true )
+         end
+      end
+
+      -- Combat holograms
+      if mem._o.hologram_projector then
+         p:outfitToggle( mem._o.hologram_projector )
       end
    end
 

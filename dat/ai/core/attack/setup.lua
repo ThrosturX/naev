@@ -1,6 +1,23 @@
 local atk = {}
 
-local o_shield_booster = outfit.get("Emergency Shield Booster")
+local usable_outfits = {
+   ["Emergency Shield Booster"]  = "shield_booster",
+   ["Berserk Chip"]              = "berserk_chip",
+   ["Combat Hologram Projector"] = "hologram_projector",
+   ["Neural Accelerator Interface"] = "neural_interface",
+   ["Blink Drive"]               = "blink_drive",
+   ["Hyperbolic Blink Engine"]   = "blink_engine",
+   ["Unicorp Jammer"]            = "jammer",
+   ["Milspec Jammer"]            = "jammer",
+}
+
+if __debugging then
+   for k,v in pairs(usable_outfits) do
+      if not outfit.get(k) then
+         warn(_("Unknown outfit"))
+      end
+   end
+end
 
 function atk.setup( p )
    local added = false
@@ -13,8 +30,9 @@ function atk.setup( p )
    -- Check out what interesting outfits there are
    for k,v in ipairs(p:outfits()) do
       if v then
-         if v == o_shield_booster then
-            o.shield_booster = k
+         local var = usable_outfits[ v:nameRaw() ]
+         if var then
+            o[var] = k
             added = true
          end
       end
