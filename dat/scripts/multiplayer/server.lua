@@ -9,12 +9,12 @@ local mp_equip = require "equipopt.templates.multiplayer"
 -- NOTE: This is a listen server
 local server = {}
 --[[
---      server.players = { player_id = pilot, ... }
---      server.world_state = { player_id = player_info, ... }
---
---      server.start()
---      server.synchronize_player( sender_info )
---      server.update()
+        server.players = { player_id = pilot, ... }
+        server.world_state = { player_id = player_info, ... }
+  
+        server.start()
+        server.synchronize_player( sender_info )
+        server.update()
 --]]
 
 -- make sure a name is unique by adding random numbers until it is
@@ -36,10 +36,12 @@ local ships = {
     "Zebra",
     "Mule",
     "Shark",
+    "Empire Shark",
+    "Pirate Shark",
     "Koala",
     "Rhino",
---  "Cargo Shuttle",
     "Quicksilver",
+    "Kestrel",
     "Pirate Kestrel",
     "Goddard",
     "Dvaered Goddard",
@@ -52,8 +54,11 @@ local ships = {
     "Pirate Starbridge",
     "Starbridge",
     "Vigilance",
+    "Dvaered Vigilance",
     "Pacifier",
-    "Empire Admonisher"
+    "Empire Pacifier",
+    "Empire Admonisher",
+    "Pirate Admonisher"
 }
 
 local MAX_NPCS = 1
@@ -78,8 +83,6 @@ local function createNpc( shiptype )
         random_spawn_point(),
         newnpc.nick,
         { naked = true }
---      { ai = "trader" }
---        { ai = "mercenary" }
     )
     mp_equip( server.players[newnpc.nick] )
     server.playerinfo[newnpc.nick] = {}
@@ -105,16 +108,20 @@ local function registerPlayer( playernicksuggest, shiptype, outfits )
         server.players[playerID] = player.pilot()
     else
         print("ADDING PLAYER " .. playerID )
+        local new_ship = ships[rnd.rnd(1, #ships)]
         server.players[playerID] = pilot.add(
-            shiptype,
+            new_ship,
             mplayerfaction,
             random_spawn_point(),
             playerID,
             { naked = true }
         )
-        for _i, outf in ipairs(outfits) do
+        mp_equip( server.players[playerID] )
+        --[[
+        for _i, outf in ipairs( server.players[playerId]:outfitsList() ) do
             server.players[playerID]:outfitAdd(outf, 1, true)
         end
+        --]]
         server.playerinfo[playerID] = {}
     end
     createNpc( shiptype )
@@ -165,13 +172,13 @@ MESSAGE_HANDLERS[common.REQUEST_UPDATE] = function ( peer, data )
     local player_id
     if #data >= 1 then
         player_id = data[1]:match( "%w+" )
---      print("player'id: " .. player_id)
+      --print("player'id: " .. player_id)
         if player_id and server.players[player_id] then
             -- update pilots
             local known_pilots = {}
             for ii, opid in ipairs( data ) do
                 if ii > 1 then
---                  print("known: " .. tostring(opid))
+                  --print("known: " .. tostring(opid))
                     known_pilots[opid] = true
                 end
             end
@@ -179,7 +186,7 @@ MESSAGE_HANDLERS[common.REQUEST_UPDATE] = function ( peer, data )
             for opid, opplt in pairs( server.players ) do
                 -- need to synchronize creation of a new pilot
                 if not known_pilots[opid] then
---                  print("syncing " .. tostring(opid))
+                  --print("syncing " .. tostring(opid))
                     if opplt:exists() then
                        local message_data = fmt.f(
                            "{opid}\n{ship_type}\n{outfits}\n",
@@ -246,19 +253,15 @@ end
 local handled_frame = {}
 
 local function handleMessage ( event )
---    print("Got message: ", event.data, event.peer)
     local msg_type
     local msg_data = {}
     for line in event.data:gmatch("[^\n]+") do
---        print("LINE: " .. line)
         if not msg_type then
             msg_type = line
         else
             table.insert(msg_data, line)
         end
     end
-
---    print("MESSAGE IS A: <" .. msg_type .. ">")
 
     if handled_frame[event.peer:index()] == msg_type then
         print( "Already handled a " .. msg_type .. " from peer " .. tostring(event.peer:index()) )
@@ -298,10 +301,10 @@ end
 
 -- synchronize one player update after receiving
 server.synchronize_player = function( player_info_str )
---  print( player_info_str )
+  --print( player_info_str )
     local ppinfo = common.unmarshal( player_info_str )
     local ppid = ppinfo.id
---    print("sync player " .. ppid .. " to health " .. tostring(ppinfo.armour) )
+    --print("sync player " .. ppid .. " to health " .. tostring(ppinfo.armour) )
     if ppid and server.players[ppid] and server.players[ppid]:exists() then
         -- sync direction always
         server.players[ppid]:setDir(ppinfo.dir)
@@ -407,12 +410,12 @@ server.refresh = function()
 
     server.world_state = world_state
 
---  print("_________________")
---  print("WORLD STATE START")
---  print("~~~~~~~~~~~~~~~~~")
---  print(world_state)
---  print("_________________")
---  print("WORLD STATE  END ")
+    --  print("_________________")
+    --  print("WORLD STATE START")
+    --  print("~~~~~~~~~~~~~~~~~")
+    --  print(world_state)
+    --  print("_________________")
+    --  print("WORLD STATE  END ")
     return world_state
 end
 
