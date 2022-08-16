@@ -131,6 +131,10 @@ local function sendMessage( peer, key, data, reliability )
     reliability = reliability or "unsequenced"
 
     local message = fmt.f( "{key}\n{msgdata}\n", { key = key, msgdata = data } )
+    if peer:state() ~= "connected" then
+        print("error: REFUSING TO SERVICE PEER IN STATE: " .. peer:state() )
+        return nil
+    end
     return peer:send( message, 0, reliability )
 end
 
@@ -149,8 +153,10 @@ MESSAGE_HANDLERS[common.REQUEST_KEY] = function ( peer, data )
             REGISTERED[peer:index()] = player_id
             return
         end
-     end
-    peer:send("ERROR: This nickname is reserved, please reconnect with another name or wait until the nickname is no longer in use..")
+    end
+    if peer:state() == "connected" then
+        peer:send("ERROR: This nickname is reserved, please reconnect with another name or wait until the nickname is no longer in use..")
+    end
 end
 
 -- player wants to sync
@@ -210,7 +216,9 @@ MESSAGE_HANDLERS[common.REQUEST_UPDATE] = function ( peer, data )
         peer:disconnect()
         return
     end
-    peer:send( emsg  )
+    if peer:state() == "connected" then
+        peer:send( emsg  )
+    end
     print( emsg )
     for k,v in pairs( data ) do
         print(tostring(k) .. ": " .. tostring(v))
@@ -223,6 +231,15 @@ MESSAGE_HANDLERS[common.SEND_MESSAGE] = function ( peer, data )
         local plid = REGISTERED[peer:index()]
         local message = common.SEND_MESSAGE .. '\n' .. data[1] .. '\n' .. server.players[plid]:name()
         return server.host:broadcast( message, 0, "unreliable" )
+    end
+end
+
+MESSAGE_HANDLERS[common.ACTIVATE_OUTFIT] = function ( peer, data )
+    if data and #data > 2 then
+        local plid = REGISTERED[peer:index()]
+        if plid == data[1] then
+            return server.host:broadcast( data, 0, "unreliable" )
+        end
     end
 end
 
@@ -294,17 +311,21 @@ server.synchronize_player = function( player_info_str )
             server.players[ppid]:pos()
         )
         local stats = server.players[ppid]:stats()
-        local fudge = 4
-        local speed2 = math.min(stats.speed_max * stats.speed_max, math.abs(ppinfo.posx + fudge * ppinfo.posy + fudge))
+        local fudge = 16
+        local speed2 = math.min(
+            stats.speed_max * stats.speed_max,
+            math.abs(ppinfo.velx + fudge * ppinfo.vely + fudge)
+        ) * 3
         if dist2 >= speed2 then
             print("WARNING: Refusing to synchronize player " .. ppid)
             server.players[ppid]:setHealth(ppinfo.armour - 1, ppinfo.shield, ppinfo.stress + 1)
             common.sync_player( ppid, ppinfo, server.players )
+        else
+            -- server side sync
+            server.players[ppid]:setPos(vec2.new(tonumber(ppinfo.posx), tonumber(ppinfo.posy)))
+            server.players[ppid]:setVel(vec2.new(tonumber(ppinfo.velx), tonumber(ppinfo.vely)))
+            server.players[ppid]:setHealth(ppinfo.armour, ppinfo.shield, ppinfo.stress)
         end
-        -- server side sync
-        server.players[ppid]:setPos(vec2.new(tonumber(ppinfo.posx), tonumber(ppinfo.posy)))
-        server.players[ppid]:setVel(vec2.new(tonumber(ppinfo.velx), tonumber(ppinfo.vely)))
-        server.players[ppid]:setHealth(ppinfo.armour, ppinfo.shield, ppinfo.stress)
         server.playerinfo[ppid] = ppinfo
         
         common.sync_player( ppid, ppinfo, server.players )

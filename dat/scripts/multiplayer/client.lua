@@ -26,6 +26,19 @@ local client = {}
 --      ...
 --]]
 
+
+-- borrowed from ai.core.attack.setup
+local usable_outfits = {
+   ["Emergency Shield Booster"]  = "shield_booster",
+   ["Berserk Chip"]              = "berserk_chip",
+   ["Combat Hologram Projector"] = "hologram_projector",
+   ["Neural Accelerator Interface"] = "neural_interface",
+   ["Blink Drive"]               = "blink_drive",
+   ["Hyperbolic Blink Engine"]   = "blink_engine",
+   ["Unicorp Jammer"]            = "jammer",
+   ["Milspec Jammer"]            = "jammer",
+}
+
 local function _marshal ( players_info )
     local cache = naev.cache()
     local message = common.marshal_me(client.playerinfo.nick, cache.accel, cache.primary, cache.secondary)
@@ -165,7 +178,7 @@ client.spawn = function( ppid, shiptype, shipname , outfits, ai )
         pmem = client.pilots[ppid]:memory()
         pmem.comm_no = _("NOTICE: Staying in chat will get you killed or disconnected. Caveat user!")
         print("created pilot for " .. tostring(ppid))
-    elseif ppid == client.playerinfo.nick then
+    elseif ppid == client.playerinfo.nick and not client.alive then
         client.pilots[ppid] = player.pilot()
         -- the server tells us to spawn in a new ship or acknowledges this ship
         local mpshiplabel = "MPSHIP" .. tostring(rnd.rnd(10000, 99999)) .. shipname
@@ -174,12 +187,15 @@ client.spawn = function( ppid, shiptype, shipname , outfits, ai )
         for _i, outf in ipairs(outfits) do
             player.pilot():outfitAdd(outf, 1, true)
         end
+        print("respawned pilot for you: " .. tostring(ppid))
+        client.alive = true
     else
         print("WARNING: Trying to add already existing pilot: " .. tostring(ppid))
     end
 end
 
 local RESYNC_INTERVAL = 64 + rnd.rnd(36, 72)
+local soft_sync = 0
 local last_resync
 client.synchronize = function( world_state )
     -- synchronize pilots
@@ -260,9 +276,10 @@ client.synchronize = function( world_state )
         else    -- if we want to sync self from server, do it here
             local ppme = player.pilot()
             local pdiff = vec2.add( ppme:pos() , -ppinfo.posx, -ppinfo.posy ):mod()
-            if pdiff > 128 or ( rsync and pdiff >= 48 ) then
+            if pdiff > 128 or ( resync and (pdiff >= 48 or soft_sync == 0)) then
                 ppme:setPos( vec2.new(ppinfo.posx, ppinfo.posy) )
-                ppme:effectAdd("Paralyzing Plasma", 1)
+                ppme:setVel( vec2.new(ppinfo.velx, ppinfo.vely) )
+--                ppme:effectAdd("Blink", 1)
             end
             -- don't override direction
             -- ppme:setVel( vec2.new(ppinfo.velx, ppinfo.vely) )
@@ -272,8 +289,36 @@ client.synchronize = function( world_state )
 
 end
 
+local function activate_outfits( )
+    local activelines = ""
+    local actives = player.pilot():actives()
+    for ii, oo in ipairs(actives) do
+        if oo.state == "on" then
+            activeline = activeline .. usable_outfits[oo.name] .. "\n"
+        end
+    end
+    safe_send(
+        fmt.f(
+            "{key}\n{ident}\n{actives}",
+            {
+                key = common.ACTIVATE_OUTFIT,
+                ident = client.playerinfo.nick,
+                actives = activelines
+            }
+        )
+    )
+end
+
+local function safe_send ( dat )
+    if client.server:state() == "connected" then
+        client.server:send( dat )
+    else
+        print(client.server:state())
+    end
+end
+
 local function tryRegister( nick )
-    client.server:send(
+    safe_send(
         fmt.f(
             "{key}\n{nick}\n{ship}\n{outfits}\n",
             {
@@ -286,7 +331,6 @@ local function tryRegister( nick )
     )
 end
 
-local soft_sync = 0
 client.update = function( timeout )
     timeout = timeout or 0
     player.cinematics(
@@ -319,14 +363,16 @@ client.update = function( timeout )
             receiveMessage( event.data )
         elseif event.type == "connect" then
             print(event.peer, " connected.")
-            player.pilot():setPos( vec2.new( 0, 0 ) )
+            player.pilot():setPos( vec2.new( rnd.rnd(-3000, 3000), rnd.rnd(-2000, 2000) ) )
             -- register with the server
             tryRegister( client.playerinfo.nick )
+            client.alive = false
         elseif event.type == "disconnect" then
             print(event.peer, " disconnected.")
             -- try to reconnect
             hook.rm(client.hook)
             hook.timer(6, "reconnect")
+            client.alive = nil
             return -- deal with the rest later
         else
             print(fmt.f("Received unknown event <{type}> from {peer}:", event))
@@ -337,9 +383,9 @@ client.update = function( timeout )
         event = client.host:service()
     end
     
-    if soft_sync > 6 then
+    if soft_sync > -2 then
         -- tell the server what we know and ask for next resync
-        client.server:send( common.REQUEST_UPDATE .. '\n' .. _marshal( client.pilots ) )
+        safe_send( common.REQUEST_UPDATE .. '\n' .. _marshal( client.pilots ) )
         soft_sync = 0
     else
         soft_sync = soft_sync + 1
@@ -403,13 +449,16 @@ MP_INPUT_HANDLERS.hail = function ( press )
     elseif hail_pressed then
         message = tk.input("COMMUNICATION", 0, 32, "Broadcast:")
         if message and message:len() > 0 then
-            client.server:send( common.SEND_MESSAGE .. '\n' .. message )
+            safe_send( common.SEND_MESSAGE .. '\n' .. message )
         end
     end
     if not player.pilot():target() then
         last_resync = 300
     end
 end
+
+
+MP_INPUT_HANDLERS.weapset7 = activate_outfits
 
 MULTIPLAYER_CLIENT_UPDATE = function() return client.update() end
 function MULTIPLAYER_CLIENT_INPUT ( inputname, inputpress, args)

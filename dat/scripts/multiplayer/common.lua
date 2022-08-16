@@ -69,17 +69,19 @@ common.receivers[common.UNREGISTERED] = function ( client, message )
         client.playerinfo.nick = message[1]
     end
     -- try to register
-    client.server:send(
-        fmt.f(
-            "{key}\n{nick}\n{ship}\n{outfits}\n",
-            {
-                key = common.REQUEST_KEY,
-                nick = client.playerinfo.nick,
-                ship = client.playerinfo.ship,
-                outfits = client.playerinfo.outfits,
-            }
+    if client.server:state() == "connected" then
+        client.server:send(
+            fmt.f(
+                "{key}\n{nick}\n{ship}\n{outfits}\n",
+                {
+                    key = common.REQUEST_KEY,
+                    nick = client.playerinfo.nick,
+                    ship = client.playerinfo.ship,
+                    outfits = client.playerinfo.outfits,
+                }
+            )
         )
-    )
+    end
 end
 
 --[[
@@ -131,7 +133,7 @@ end
 common.receivers[common.RECEIVE_UPDATE] = function ( client, message )
     local world_state = {}
     world_state.players = {}
-    for _, player_line in ipairs( message ) do
+    for _ii, player_line in ipairs( message ) do
         local this_player = parsePlayer( player_line )
         world_state.players[this_player.id] =  unmarshal( this_player )
     end
@@ -141,14 +143,22 @@ end
 
 --[[
 --  receive an update about a pilot activating a weapon set
---  lines should be: player_id\nweaponsetinfo1\nweaponsetinfo2 ...
---  each weaponset line should be: .... TODO!
+--  lines should be: player_id\nactivated1\nactivated2 ...
+--  each activated line should be like: blink_engine
 --]]
 common.receivers[common.ACTIVATE_OUTFIT] = function ( client, message )
-    local actives = client.pilots[pilotid]:actives()
-    for ii, oo in ipairs(actives) do
-        if oo.name == outf then
-            print(" THIS IS TODO ! WHY IT RUNNING?? " )
+    if #message >= 2 then
+        local playerID
+        for ii, activated_line in ipairs( message ) do
+            if ii == 1 then
+                playerID = activated_line
+            else    -- trust the server
+                outf = activated_line
+                clplt = client.pilots[playerID]
+                if clplt and clplt:exists() then
+                    clplt:outfitToggle(outf, true)
+                end
+            end
         end
     end
 end
@@ -194,19 +204,19 @@ common.marshal_me = function( ident )
     end
     local message = fmt.f("{id} {posx} {posy} {dir} {velx} {vely} {armour} {shield} {stress} {accel} {primary} {secondary} {target}",
         {
-            id = ident,
-            posx = posx,
-            posy = posy,
-            dir = player.pilot():dir(),
-            velx = velx,
-            vely = vely,
-            armour = armour,
-            shield = shield,
-            stress = stress,
-            accel = accel,
-            primary = primary,
+            id        = ident,
+            posx      = posx,
+            posy      = posy,
+            dir       = player.pilot():dir(),
+            velx      = velx,
+            vely      = vely,
+            armour    = armour,
+            shield    = shield,
+            stress    = stress,
+            accel     = accel,
+            primary   = primary,
             secondary = secondary,
-            target = target,
+            target    = target,
         }
     )
     return message
