@@ -176,6 +176,7 @@ MESSAGE_HANDLERS[common.REQUEST_UPDATE] = function ( peer, data )
         if player_id and server.players[player_id] then
             -- update pilots
             local known_pilots = {}
+            known_pilots[player_id] = true
             for ii, opid in ipairs( data ) do
                 if ii > 1 then
                   --print("known: " .. tostring(opid))

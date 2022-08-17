@@ -178,8 +178,8 @@ client.spawn = function( ppid, shiptype, shipname , outfits, ai )
         pmem = client.pilots[ppid]:memory()
         pmem.comm_no = _("NOTICE: Staying in chat will get you killed or disconnected. Caveat user!")
         print("created pilot for " .. tostring(ppid))
-    elseif ppid == client.playerinfo.nick and not client.alive then
-        client.pilots[ppid] = player.pilot()
+    elseif ppid == client.playerinfo.nick and not client.alive or shiptype ~= player.pilot():ship():nameRaw() then
+--      client.pilots[ppid] = player.pilot()
         -- the server tells us to spawn in a new ship or acknowledges this ship
         local mpshiplabel = "MPSHIP" .. tostring(rnd.rnd(10000, 99999)) .. shipname
         local mplayership = player.addShip(shiptype, mpshiplabel, "Multiplayer", true)
