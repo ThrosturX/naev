@@ -50,6 +50,7 @@ common.receivers[common.REGISTRATION_KEY] = function ( client, message )
     if message and #message == 1 then
         client.playerinfo.nick = message[1]
         client.registered = true
+        client.alive = false
         print("YOU HAVE BEEN REGISTERED AS <" .. client.playerinfo.nick .. ">.")
     else
         print("FAILED TO REGISTER:")
