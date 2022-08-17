@@ -1,4 +1,5 @@
 local fmt = require "format"
+local ai_setup = require "ai.core.setup"
 
 --  each line is <player_id> <pos> <dir> <vel> <armour> <shield> <stress>
 local function unmarshal( player_info )
@@ -31,15 +32,17 @@ local function unmarshal( player_info )
 end
 
 local common = {}
-common.REQUEST_KEY      = "IDENTIFY"
-common.UNREGISTERED     = "UNREGISTERED"
-common.REQUEST_UPDATE   = "SYNC_PILOTS"
-common.RECEIVE_UPDATE   = "UPDATE"
-common.ADD_PILOT        = "SPAWN"
-common.ADD_NPC          = "SPAWN_NPC"
-common.REGISTRATION_KEY = "REGISTERED"
-common.ACTIVATE_OUTFIT  = "ACTIVATE"
-common.SEND_MESSAGE     = "MESSAGE"
+common.REQUEST_KEY       = "IDENTIFY"
+common.UNREGISTERED      = "UNREGISTERED"
+common.REQUEST_UPDATE    = "SYNC_PILOTS"
+common.RECEIVE_UPDATE    = "UPDATE"
+common.SYNC_PLAYER       = "SYNC"
+common.ADD_PILOT         = "SPAWN"
+common.ADD_NPC           = "SPAWN_NPC"
+common.REGISTRATION_KEY  = "REGISTERED"
+common.ACTIVATE_OUTFIT   = "ACTIVATE"
+common.DEACTIVATE_OUTFIT = "DEACTIVATE"
+common.SEND_MESSAGE      = "MESSAGE"
 common.receivers = {}
 
 --[[
@@ -143,11 +146,33 @@ common.receivers[common.RECEIVE_UPDATE] = function ( client, message )
 end
 
 --[[
---  receive an update about a pilot activating a weapon set
---  lines should be: player_id\nactivated1\nactivated2 ...
---  each activated line should be like: blink_engine
+--  the server wants to synchronize some player stats
+--  the line is <player_id> <energy> <heat> <armor> <shield> <stress>
+--  also refills ammo
 --]]
-common.receivers[common.ACTIVATE_OUTFIT] = function ( client, message )
+common.receivers[common.SYNC_PLAYER] = function ( client, message )
+    if #message == 1 then
+        local sync_player = parsePlayer( message[1] )
+        if sync_player.id then
+            local sync_pilot
+                if sync_player.id == client.playerinfo.nick then
+                    sync_pilot = player.pilot()
+                elseif sync_pilot and sync_pilot:exists() then
+                    sync_pilot = client.pilots[sync_player]
+                else
+                    print("WARNING: Trying to sync an unknown player <" .. sync_player.id .. ">")
+                    return
+                end
+            sync_pilot:setEnergy(sync_player.stats[1])
+            sync_pilot:setTemp(sync_player.stats[2])
+            sync_pilot:setHealth(sync_player.stats[3], sync_player.stats[4], sync_player.stats[5])
+            sync_pilot:fillAmmo()
+            ai_setup.setup( sync_pilot )
+        end
+    end
+end
+
+local function toggleOutfit( client, message, on )
     if #message >= 2 then
         local playerID
         for ii, activated_line in ipairs( message ) do
@@ -157,11 +182,30 @@ common.receivers[common.ACTIVATE_OUTFIT] = function ( client, message )
                 outf = activated_line
                 clplt = client.pilots[playerID]
                 if clplt and clplt:exists() then
-                    clplt:outfitToggle(clplt:memory()._o[outf], true)
+                    --print(outf .. " turned " .. tostring(on))
+                    clplt:outfitToggle(clplt:memory()._o[outf], on)
                 end
             end
         end
     end
+end
+
+--[[
+--  receive an update about a pilot activating a weapon set
+--  lines should be: player_id\nactivated1\nactivated2 ...
+--  each activated line should be like: blink_engine
+--]]
+common.receivers[common.ACTIVATE_OUTFIT] = function ( client, message )
+    return toggleOutfit( client, message, true )
+end
+--
+--[[
+--  receive an update about a pilot deactivating an outfit
+--  lines should be: player_id\nactivated1\nactivated2 ...
+--  each activated line should be like: blink_engine
+--]]
+common.receivers[common.DEACTIVATE_OUTFIT] = function ( client, message )
+    return toggleOutfit( client, message, false )
 end
 
 --[[

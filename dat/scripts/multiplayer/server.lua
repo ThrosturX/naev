@@ -5,6 +5,7 @@ local enet = require "enet"
 local fmt = require "format"
 local pilotname = require "pilotname"
 local mp_equip = require "equipopt.templates.multiplayer"
+local ai_setup = require "ai.core.setup"
 
 -- NOTE: This is a listen server
 --  it can't play like a client, but it relays the simulation
@@ -126,11 +127,7 @@ local function registerPlayer( playernicksuggest, shiptype, outfits )
             { naked = true }
         )
         mp_equip( server.players[playerID] )
-        --[[
-        for _i, outf in ipairs( server.players[playerId]:outfitsList() ) do
-            server.players[playerID]:outfitAdd(outf, 1, true)
-        end
-        --]]
+        ai_setup.setup( server.players[playerID] )
         server.playerinfo[playerID] = {}
     end
     createNpc( shiptype )
@@ -152,6 +149,18 @@ local function sendMessage( peer, key, data, reliability )
         return nil
     end
     return peer:send( message, 0, reliability )
+end
+
+local function broadcast( key, data, reliability )
+    if not common.receivers[key] then
+        print("error: " .. tostring(key) .. " not found in MSG_KEYS.")
+        return nil
+    end
+
+    reliability = reliability or "unsequenced"
+
+    local message = fmt.f( "{key}\n{msgdata}\n", { key = key, msgdata = data } )
+    return server.host:broadcast( message, 0, reliability )
 end
 
 local MESSAGE_HANDLERS = {}
@@ -252,26 +261,60 @@ MESSAGE_HANDLERS[common.SEND_MESSAGE] = function ( peer, data )
     -- peer wants to broadcast <data>[1] as a message
     if data and #data >= 1 then
         local plid = REGISTERED[peer:index()]
-        local message = common.SEND_MESSAGE .. '\n' .. data[1] .. '\n' .. server.players[plid]:name()
-        return server.host:broadcast( message, 0, "unreliable" )
+        local message =  data[1] .. '\n' .. server.players[plid]:name()
+        return broadcast( common.SEND_MESSAGE, message )
     end
 end
 
-MESSAGE_HANDLERS[common.ACTIVATE_OUTFIT] = function ( peer, data )
---  print(tostring(REGISTERED[peer:index()]) .. " ACTIVATE_OUTFIT " .. tostring(#data))
---  for k,v in ipairs(data) do
---     print("data " .. tostring(k) .. ": " .. tostring(v))
---  end
+local function toggleOutfit( plid, message, on )
+    if #message >= 2 then
+        local playerID
+        for ii, activated_line in ipairs( message ) do
+            if ii == 1 then
+                playerID = activated_line
+                if plid ~= playerID then
+                    print("WARNING: Peer trying to activate wrong person's outfit: " .. tostring())
+                    return
+                end
+            else    -- don't fully trust the client
+                outf = activated_line
+                clplt = server.players[playerID]
+                if clplt and clplt:exists() then
+                    local memo = clplt:memory()._o
+                    if memo then
+                        local outno = memo[outf]
+                        if outno then
+                            clplt:outfitToggle(outno, on)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function outfit_handler ( peer, data )
     if data and #data >= 2 then
         local plid = REGISTERED[peer:index()]
         local activedata = ''
-        for ii, dline in ipairs(data) do
+        for ii, dline in ipairs( data ) do
             activedata = activedata .. dline .. '\n'
         end
         if plid == data[1] then
             return server.host:broadcast( common.ACTIVATE_OUTFIT .. '\n' .. activedata, 0, "unreliable" )
         end
     end
+end
+
+MESSAGE_HANDLERS[common.ACTIVATE_OUTFIT] = function ( peer, data )
+    local plid = REGISTERED[peer:index()]
+    toggleOutfit( plid, data , true )
+    return outfit_handler( peer, data)
+end
+MESSAGE_HANDLERS[common.DEACTIVATE_OUTFIT] = function ( peer, data )
+    local plid = REGISTERED[peer:index()]
+    toggleOutfit( plid, data , false )
+    return outfit_handler( peer, data)
 end
 
 local handled_frame = {}
@@ -375,6 +418,19 @@ server.synchronize_player = function( peer, player_info_str )
                }
             )
             sendMessage( peer, common.ADD_PILOT, message_data, "reliable" )
+            local syncline = fmt.f(
+                "{ppid} {energy} {heat} {armour} {shield} {stress}",
+                {
+                    ppid = ppid,
+                    energy = 5,
+                    heat = 250,
+                    armour = 100,
+                    shield = 80,
+                    stress = 0,
+                }
+            )
+            sendMessage( peer, common.SYNC_PLAYER, syncline, "reliable" )
+            server.players[ppid]:fillAmmo()
         else
             -- server side sync
             server.players[ppid]:setPos(vec2.new(tonumber(ppinfo.posx), tonumber(ppinfo.posy)))
@@ -383,10 +439,30 @@ server.synchronize_player = function( peer, player_info_str )
         end
         server.playerinfo[ppid] = ppinfo
         
+        -- server authority on health
+        local armour, shield, stress = server.players[ppid]:health()
+        ppinfo.armour = armour
+        ppinfo.shield = shield
+        ppinfo.stress = stress
+        local syncline = fmt.f(
+            "{ppid} {energy} {heat} {armour} {shield} {stress}",
+            {
+                ppid = ppid,
+                energy = server.players[ppid]:energy(),
+                heat = server.players[ppid]:temp(),
+                armour = armour,
+                shield = shield,
+                stress = stress,
+            }
+        )
+        if ppinfo.armour > armour * 1.02 or ppinfo.shield > shield * 1.02 or ppinfo.stress > stress + 10 then
+            broadcast( common.SYNC_PLAYER, syncline, "unreliable" )
+            server.players[ppid]:fillAmmo()
+        elseif rnd.rnd(0, 13) == 0 then
+            sendMessage( peer, common.SYNC_PLAYER, syncline, "reliable" )
+        end
         common.sync_player( ppid, ppinfo, server.players )
     end
-
-
 end
 
 server.refresh = function()
@@ -409,6 +485,23 @@ server.refresh = function()
         else    -- spawn a new one :)
             server.npcs[nid] = nil
             createNpc()
+            -- create a record of it being definitely dead "this frame"
+            -- this shouldn't be necessary but might help later
+            world_state = world_state .. fmt.f("{id} {posx} {posy} {dir} {velx} {vely} {armour} {shield} {stress} {accel} {primary} {secondary} {target}\n", {
+                id = nid,
+                posx = rnd.rnd(-9999, 9999),
+                posy = rnd.rnd(-9999, 9999),
+                dir = 0,
+                velx = 0,
+                vely = 0,
+                armour = 0,
+                shield = 0,
+                stress = 100,
+                accel = 0,
+                primary = 0,
+                secondary = 0,
+                target = server.hostnick,
+            })
         end
     end
 

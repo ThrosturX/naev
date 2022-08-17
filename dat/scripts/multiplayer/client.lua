@@ -128,9 +128,9 @@ client.start = function( bindaddr, bindport, localport )
     local ship_choices = ship_choices_small
     local player_ship = ship_choices[ rnd.rnd(1, #ship_choices) ]
     local mpshiplabel = "MULTIPLAYER SHIP"
-    local mplayership = player.addShip(player_ship, mpshiplabel, "Multiplayer", true)
-    player.swapShip( mpshiplabel, false, false )
-    mp_equip( player.pilot() )
+  --local mplayership = player.addShip(player_ship, mpshiplabel, "Multiplayer", true)
+  --player.swapShip( mpshiplabel, false, false )
+  --mp_equip( player.pilot() )
 
     -- send the player off
     player.takeoff()
@@ -178,6 +178,9 @@ client.spawn = function( ppid, shiptype, shipname , outfits, ai )
         { ai = ai, clear_allies = true, clear_enemies = true } 
     )
     if ppid ~= client.playerinfo.nick and (not client.pilots[ppid] or client.pilots[ppid]:ship():nameRaw() ~= shiptype) then
+        if client.pilots[ppid] then
+            client.pilots[ppid]:setHealth(0)
+        end
         client.pilots[ppid] = pilot.add(
             shiptype,
             mplayerfaction,
@@ -205,6 +208,9 @@ client.spawn = function( ppid, shiptype, shipname , outfits, ai )
             print("respawned pilot for you: " .. tostring(ppid))
             client.alive = true
             hard_resync = true
+            for _ii, oplt in ipairs(client.pilots) do
+                oplt:setHealth(0)
+            end
         else
             hard_resync = false
             client.alive = false
@@ -334,10 +340,16 @@ end
 
 local function activate_outfits( )
     local activelines = ""
+    local deactilines = ""
     local actives = player.pilot():actives()
+    local message
     for ii, oo in ipairs(actives) do
-        if oo.state == "on" and usable_outfits[oo.name] then
-            activelines = activelines .. usable_outfits[oo.name] .. "\n"
+        if usable_outfits[oo.name] then
+            if oo.state == "on" then
+                activelines = activelines .. usable_outfits[oo.name] .. "\n"
+            elseif oo.state == "off" then
+                deactilines = deactilines .. usable_outfits[oo.name] .. "\n"
+            end
         end
     end
     if activelines:len() > 0 then
@@ -347,6 +359,17 @@ local function activate_outfits( )
                 key = common.ACTIVATE_OUTFIT,
                 ident = client.playerinfo.nick,
                 actives = activelines
+            }
+        )
+        safe_send( message )
+    end
+    if deactilines:len() > 0 then
+        message = fmt.f(
+            "{key}\n{ident}\n{actives}",
+            {
+                key = common.DEACTIVATE_OUTFIT,
+                ident = client.playerinfo.nick,
+                actives = deactilines
             }
         )
         safe_send( message )
