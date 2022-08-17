@@ -333,6 +333,7 @@ end
 
 client.update = function( timeout )
     timeout = timeout or 0
+    --[[
     player.cinematics(
         false,
         {
@@ -341,7 +342,8 @@ client.update = function( timeout )
             gui = true
         }
     )
---    player.autonavReset()
+    --]]
+    player.autonavReset()
     -- check what we think that we know about others
     for cpid, cpplt in pairs(client.pilots) do
         if not cpplt or not cpplt:exists() then
@@ -407,6 +409,15 @@ function enterMultiplayer()
     tryRegister( client.playerinfo.nick )
 
     client.update( 4000 )
+
+    player.cinematics(
+        false,
+        {
+            abort = _("Autonav disabled in multiplayer."),
+            no2x = true,
+            gui = true
+        }
+    )
     
     client.hook = hook.update("MULTIPLAYER_CLIENT_UPDATE")
     client.inputhook = hook.input("MULTIPLAYER_CLIENT_INPUT")

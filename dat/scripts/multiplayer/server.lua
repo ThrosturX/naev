@@ -296,6 +296,15 @@ server.start = function( port )
         player.pilot():setNoDeath( true )    -- keep the server running
         player.pilot():setInvincible( true ) -- keep the server running
         player.pilot():setInvisible( true )  -- keep the npcs from chasing the server
+
+        player.cinematics(
+            false,
+            {
+                abort = _("Autonav disabled in multiplayer."),
+                no2x = true,
+                gui = false
+            }
+        )
     end
 end
 
@@ -421,15 +430,7 @@ end
 
 -- do I need to explain this?
 server.update = function ()
-    player.cinematics(
-        false,
-        {
-            abort = _("Autonav disabled in multiplayer."),
-            no2x = true,
-            gui = false
-        }
-    )
---    player.autonavReset()
+    player.autonavReset()
 --    synchronize the server peer
 --    server.synchronize_player ( common.marshal_me( player.name() ) )
     -- refresh our world state before updating clients
