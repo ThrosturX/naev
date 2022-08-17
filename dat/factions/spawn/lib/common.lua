@@ -157,7 +157,7 @@ function scom.spawn( pilots )
    for _k,v in ipairs(pilots) do
       local params = v.params or {}
       if params.stealth==nil and pilots.__stealth then
-         params.stealth= true
+         params.stealth = true
       end
       if params.ai==nil and pilots.__ai then
          params.ai = pilots.__ai
@@ -171,10 +171,13 @@ function scom.spawn( pilots )
          if leader == nil then
             leader = p
             if pilots.__formation ~= nil then
-               leader:memory().formation = pilots.__formation
+               mem.formation = pilots.__formation
             end
          else
             p:setLeader(leader)
+            if #pilots > 1 then
+               mem.autoleader = true
+            end
          end
       end
       if pilots.__doscans then

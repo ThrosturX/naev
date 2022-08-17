@@ -75,7 +75,23 @@ function atk.think( target, si )
 
       -- Combat holograms
       if mem._o.hologram_projector then
-         p:outfitToggle( mem._o.hologram_projector )
+         if rnd.rnd() < 0.3 and ai.dist( target ) < 3000 then
+            p:outfitToggle( mem._o.hologram_projector, true )
+         end
+      end
+
+      -- The bite
+      if mem._o.bite then
+         local dtime = 3
+         if mem._o.bite_lust then
+            dtime = dtime+2
+         end
+         if ai.dir( target ) < math.rad(20) then
+            local s = p:stats()
+            if ai.dist( target ) < (s.speed + (s.thrust+800)/3)*dtime then
+               p:outfitToggle( mem._o.bite, true )
+            end
+         end
       end
    end
 
