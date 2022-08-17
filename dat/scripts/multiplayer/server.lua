@@ -331,8 +331,10 @@ server.synchronize_player = function( player_info_str )
         ) * 3
         if dist2 >= speed2 then
             print("WARNING: Refusing to synchronize player " .. ppid)
+            if rnd.rnd(0, 160) == 0 then
+                common.sync_player( ppid, ppinfo, server.players )
+            end
             server.players[ppid]:setHealth(ppinfo.armour - 1, ppinfo.shield, ppinfo.stress + 1)
-            common.sync_player( ppid, ppinfo, server.players )
         else
             -- server side sync
             server.players[ppid]:setPos(vec2.new(tonumber(ppinfo.posx), tonumber(ppinfo.posy)))

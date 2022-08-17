@@ -197,6 +197,7 @@ end
 local RESYNC_INTERVAL = 64 + rnd.rnd(36, 72)
 local soft_sync = 0
 local last_resync
+-- TODO HERE: refactor some common.sync_player (resync=true regularly)
 client.synchronize = function( world_state )
     -- synchronize pilots
     local resync
