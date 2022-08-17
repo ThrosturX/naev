@@ -42,8 +42,9 @@ local usable_outfits = {
 local function _marshal ( players_info )
     local cache = naev.cache()
     local message = common.marshal_me(client.playerinfo.nick, cache.accel, cache.primary, cache.secondary)
-    for opid, _opplt in pairs(players_info) do
-        message = message .. '\n' .. tostring(opid)
+    for opid, opplt in pairs(players_info) do
+        -- TODO cache ooplts' ships
+        message = message .. '\n' .. fmt.f( "{id}={ship}", { id = opid, ship = opplt:ship():nameRaw() } )
     end
     return message .. '\n'
 end
@@ -151,6 +152,7 @@ client.start = function( bindaddr, bindport, localport )
     }
 end
 
+local hard_resync
 local MY_SPAWN_POINT = player.pilot():pos()
 client.spawn = function( ppid, shiptype, shipname , outfits, ai )
     --[[
@@ -164,7 +166,8 @@ client.spawn = function( ppid, shiptype, shipname , outfits, ai )
         nil, "Multiplayer", "Multiplayer",
         { ai = ai, clear_allies = true, clear_enemies = true } 
     )
-    if not client.pilots[ppid] and ppid ~= client.playerinfo.nick then
+    print(ppid, shiptype, shipname)
+    if ppid ~= client.playerinfo.nick and (not client.pilots[ppid] or client.pilots[ppid]:ship():nameRaw() ~= shiptype) then
         client.pilots[ppid] = pilot.add(
             shiptype,
             mplayerfaction,
@@ -178,17 +181,23 @@ client.spawn = function( ppid, shiptype, shipname , outfits, ai )
         pmem = client.pilots[ppid]:memory()
         pmem.comm_no = _("NOTICE: Staying in chat will get you killed or disconnected. Caveat user!")
         print("created pilot for " .. tostring(ppid))
-    elseif ppid == client.playerinfo.nick and ( not client.alive or shiptype ~= player.pilot():ship():nameRaw() ) then
---      client.pilots[ppid] = player.pilot()
-        -- the server tells us to spawn in a new ship or acknowledges this ship
-        local mpshiplabel = "MPSHIP" .. tostring(rnd.rnd(10000, 99999)) .. shipname
-        local mplayership = player.addShip(shiptype, mpshiplabel, "Multiplayer", true)
-        player.swapShip( mpshiplabel, false, false )
-        for _i, outf in ipairs(outfits) do
-            player.pilot():outfitAdd(outf, 1, true)
+    elseif ppid == client.playerinfo.nick then
+        if ( not client.alive or shiptype ~= player.pilot():ship():nameRaw() ) then
+    --      client.pilots[ppid] = player.pilot()
+            -- the server tells us to spawn in a new ship or acknowledges this ship
+            local mpshiplabel = "MPSHIP" .. tostring(rnd.rnd(10000, 99999)) .. shipname
+            local mplayership = player.addShip(shiptype, mpshiplabel, "Multiplayer", true)
+            player.swapShip( mpshiplabel, false, false )
+            for _i, outf in ipairs(outfits) do
+                player.pilot():outfitAdd(outf, 1, true)
+            end
+            print("respawned pilot for you: " .. tostring(ppid))
+            client.alive = true
+            hard_resync = true
+        else
+            hard_resync = true
+            client.alive = false
         end
-        print("respawned pilot for you: " .. tostring(ppid))
-        client.alive = true
     else
         print("WARNING: Trying to add already existing pilot: " .. tostring(ppid))
     end
@@ -197,6 +206,7 @@ end
 local RESYNC_INTERVAL = 64 + rnd.rnd(36, 72)
 local soft_sync = 0
 local last_resync
+local FPS = 60
 -- TODO HERE: refactor some common.sync_player (resync=true regularly)
 client.synchronize = function( world_state )
     -- synchronize pilots
@@ -207,6 +217,7 @@ client.synchronize = function( world_state )
         last_resync = 0
     end
     last_resync = last_resync + 1
+    local frames_passed = client.server:round_trip_time() / (1000 / FPS)
     for ppid, ppinfo in pairs(world_state.players) do
         if ppid ~= client.playerinfo.nick then
             if client.pilots[ppid] then
@@ -217,8 +228,8 @@ client.synchronize = function( world_state )
                 else
                     client.pilots[ppid]:setTarget( player.pilot() )
                 end
-                local pdiff = vec2.add( this_pilot:pos() , -ppinfo.posx, -ppinfo.posy ):mod()
-                if resync and pdiff > 6 then
+                local pdiff = math.abs( vec2.add( this_pilot:pos() , -ppinfo.posx, -ppinfo.posy ):mod() )
+                if hard_resync or (resync and pdiff > 6) then
                     client.pilots[ppid]:setPos(vec2.new(ppinfo.posx, ppinfo.posy))
                     client.pilots[ppid]:setVel(vec2.new(ppinfo.velx, ppinfo.vely))
                 elseif pdiff > 8 then
@@ -277,9 +288,16 @@ client.synchronize = function( world_state )
         else    -- if we want to sync self from server, do it here
             local ppme = player.pilot()
             local pdiff = vec2.add( ppme:pos() , -ppinfo.posx, -ppinfo.posy ):mod()
-            if pdiff > 128 or ( resync and (pdiff >= 48 or soft_sync == 0)) then
+            local mdiff = (
+                math.abs( vec2.new( ppinfo.velx + 6, ppinfo.vely + 6):mod() * 6 ) + 4
+            ) * frames_passed
+            if pdiff > mdiff * 3.36 or ( resync and (pdiff >= mdiff and soft_sync == 0)) or hard_resync then
                 ppme:setPos( vec2.new(ppinfo.posx, ppinfo.posy) )
-                ppme:setVel( vec2.new(ppinfo.velx, ppinfo.vely) )
+                if hard_resync then
+                  ppme:setVel( vec2.new(ppinfo.velx, ppinfo.vely) )
+                end
+                print("HARD SYNC " .. tostring(hard_resync))
+                hard_resync = nil
 --                ppme:effectAdd("Blink", 1)
             end
             -- don't override direction
@@ -314,7 +332,8 @@ local function safe_send ( dat )
     if client.server:state() == "connected" then
         client.server:send( dat )
     else
-        print(client.server:state())
+        print("Cannot send in unconnected state: " .. client.server:state())
+        client.alive = nil
     end
 end
 

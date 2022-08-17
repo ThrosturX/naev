@@ -162,7 +162,7 @@ MESSAGE_HANDLERS[common.REQUEST_KEY] = function ( peer, data )
         end
     end
     if peer:state() == "connected" then
-        peer:send("ERROR: This nickname is reserved, please reconnect with another name or wait until the nickname is no longer in use..")
+        peer:send("ERROR: This nickname is reserved, please reconnect with another name or wait until the nickname is no longer in use.")
     end
 end
 
@@ -177,10 +177,22 @@ MESSAGE_HANDLERS[common.REQUEST_UPDATE] = function ( peer, data )
             -- update pilots
             local known_pilots = {}
             known_pilots[player_id] = true
-            for ii, opid in ipairs( data ) do
+            for ii, line in ipairs( data ) do
                 if ii > 1 then
-                  --print("known: " .. tostring(opid))
-                    known_pilots[opid] = true
+                    for opid, opship in string.gmatch(line, "(%w+)=([%w|%s]+)") do
+                        if server.players[opid] and server.players[opid]:exists() and opship == server.players[opid]:ship():nameRaw() then
+                            known_pilots[opid] = true
+                            --print("known: " .. tostring(opid) .. " in " .. tostring(opship))
+                            --[[
+                        else
+                            local thing = "nothing"
+                            if server.players[opid] and server.players[opid]:exists() then
+                                thing = server.players[opid]:ship():nameRaw()
+                            end
+                            print(player_id .. " UNknown: " .. tostring(opid) .. " in wrong " .. tostring(opship) .. " should be in " .. thing)
+                            --]]
+                        end
+                    end
                 end
             end
 
