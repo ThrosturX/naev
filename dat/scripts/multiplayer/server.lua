@@ -7,6 +7,7 @@ local pilotname = require "pilotname"
 local mp_equip = require "equipopt.templates.multiplayer"
 
 -- NOTE: This is a listen server
+--  it can't play like a client, but it relays the simulation
 local server = {}
 --[[
         server.players = { player_id = pilot, ... }
@@ -40,6 +41,7 @@ local ships = {
     "Pirate Shark",
     "Koala",
     "Rhino",
+    "Pirate Rhino",
     "Quicksilver",
     "Kestrel",
     "Pirate Kestrel",
@@ -58,8 +60,14 @@ local ships = {
     "Pacifier",
     "Empire Pacifier",
     "Empire Admonisher",
-    "Pirate Admonisher"
+    "Pirate Admonisher",
+    "Admonisher"
 }
+
+local function _sanitize_name( suggest )
+    local word = suggest:match( "%w+" )
+    return word or "playorDumbf"
+end
 
 local MAX_NPCS = 6
 -- spawn an NPC
@@ -74,9 +82,9 @@ local function createNpc( shiptype )
     end
     shiptype = shiptype or ships[rnd.rnd(1, #ships)]
     local newnpc = {}
-    newnpc.nick = pilotname.human():gsub(" ", "t"):gsub("'", "ek")
+    newnpc.nick = _sanitize_name(pilotname.human():gsub(" ", "t"):gsub("'", "ek"))
     server.npcs[newnpc.nick] = true
-    local newfac = faction.dynAdd("Independent", "NPC" .. tostring(rnd.rnd(0,499)), "NPC", { ai="mercenary", clear_allies = true, clear_enemies = true } )
+    local newfac = faction.dynAdd("Independent", "NPC" .. tostring(rnd.rnd(0,349)), "NPC", { ai="mercenary", clear_allies = true, clear_enemies = true } )
     server.players[newnpc.nick] = pilot.add(
         shiptype,
         newfac,
@@ -92,6 +100,7 @@ end
 
 -- registers a player, returns the players unique ID
 local function registerPlayer( playernicksuggest, shiptype, outfits )
+    playernicksuggest = _sanitize_name( playernicksuggest )
     if server.players[playernicksuggest] then
         -- prevent double registration
           return nil
@@ -180,17 +189,12 @@ MESSAGE_HANDLERS[common.REQUEST_UPDATE] = function ( peer, data )
             for ii, line in ipairs( data ) do
                 if ii > 1 then
                     for opid, opship in string.gmatch(line, "(%w+)=([%w|%s|']+)") do
-                        if server.players[opid] and server.players[opid]:exists() and opship == server.players[opid]:ship():nameRaw() then
+                        if
+                            server.players[opid]    -- we know this pilot
+                            and server.players[opid]:exists()   -- it exists
+                            and opship == server.players[opid]:ship():nameRaw() -- the ship is correct
+                        then
                             known_pilots[opid] = true
-                            --print("known: " .. tostring(opid) .. " in " .. tostring(opship))
-                            --[[
-                        else
-                            local thing = "nothing"
-                            if server.players[opid] and server.players[opid]:exists() then
-                                thing = server.players[opid]:ship():nameRaw()
-                            end
-                            print(player_id .. " UNknown: " .. tostring(opid) .. " in wrong " .. tostring(opship) .. " should be in " .. thing)
-                            --]]
                         end
                     end
                 end
@@ -199,7 +203,6 @@ MESSAGE_HANDLERS[common.REQUEST_UPDATE] = function ( peer, data )
             for opid, opplt in pairs( server.players ) do
                 -- need to synchronize creation of a new pilot
                 if not known_pilots[opid] then
-                  --print("syncing " .. tostring(opid))
                     if opplt:exists() then
                        local message_data = fmt.f(
                            "{opid}\n{ship_type}\n{outfits}\n",
@@ -255,10 +258,18 @@ MESSAGE_HANDLERS[common.SEND_MESSAGE] = function ( peer, data )
 end
 
 MESSAGE_HANDLERS[common.ACTIVATE_OUTFIT] = function ( peer, data )
-    if data and #data > 2 then
+--  print(tostring(REGISTERED[peer:index()]) .. " ACTIVATE_OUTFIT " .. tostring(#data))
+--  for k,v in ipairs(data) do
+--     print("data " .. tostring(k) .. ": " .. tostring(v))
+--  end
+    if data and #data >= 2 then
         local plid = REGISTERED[peer:index()]
+        local activedata = ''
+        for ii, dline in ipairs(data) do
+            activedata = activedata .. dline .. '\n'
+        end
         if plid == data[1] then
-            return server.host:broadcast( data, 0, "unreliable" )
+            return server.host:broadcast( common.ACTIVATE_OUTFIT .. '\n' .. activedata, 0, "unreliable" )
         end
     end
 end
@@ -321,9 +332,11 @@ server.start = function( port )
     end
 end
 
+local FPS = 60
 -- synchronize one player update after receiving
 server.synchronize_player = function( peer, player_info_str )
   --print( player_info_str )
+    local frames_passed = peer:round_trip_time() / (1000 / FPS)
     local ppinfo = common.unmarshal( player_info_str )
     local ppid = ppinfo.id
     --print("sync player " .. ppid .. " to health " .. tostring(ppinfo.armour) )
@@ -341,7 +354,10 @@ server.synchronize_player = function( peer, player_info_str )
             stats.speed_max * stats.speed_max,
             math.abs(ppinfo.velx + fudge * ppinfo.vely + fudge)
         ) * 3
-        if dist2 >= speed2 then
+        local mdiff = (
+            math.abs( vec2.new( ppinfo.velx + fudge, ppinfo.vely + fudge):mod() * fudge ) + fudge 
+        ) * frames_passed
+        if dist2 >= speed2 or dist2 > (mdiff * mdiff) then
             print("WARNING: Refusing to synchronize player " .. ppid)
             --[[
             if rnd.rnd(0, 160) == 0 then

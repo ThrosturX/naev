@@ -157,7 +157,7 @@ common.receivers[common.ACTIVATE_OUTFIT] = function ( client, message )
                 outf = activated_line
                 clplt = client.pilots[playerID]
                 if clplt and clplt:exists() then
-                    clplt:outfitToggle(outf, true)
+                    clplt:outfitToggle(clplt:memory()._o[outf], true)
                 end
             end
         end

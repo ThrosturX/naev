@@ -4,6 +4,7 @@ local common = require "multiplayer.common"
 local enet = require "enet"
 local fmt = require "format"
 local mp_equip = require "equipopt.templates.multiplayer"
+local ai_setup = require "ai.core.setup"
 -- require "factions.equip.generic"
 
 local client = {}
@@ -37,6 +38,11 @@ local usable_outfits = {
    ["Hyperbolic Blink Engine"]   = "blink_engine",
    ["Unicorp Jammer"]            = "jammer",
    ["Milspec Jammer"]            = "jammer",
+   -- Bioships
+   ["Feral Rage III"]            = "feral_rage",
+   ["The Bite"]                  = "bite",
+   ["The Bite - Improved"]       = "bite",
+   ["The Bite - Blood Lust"]     = {"bite", "bite_lust"},
 }
 
 local function _marshal ( players_info )
@@ -177,6 +183,7 @@ client.spawn = function( ppid, shiptype, shipname , outfits, ai )
         for _i, outf in ipairs(outfits) do
             client.pilots[ppid]:outfitAdd(outf, 1, true)
         end
+        ai_setup.setup( client.pilots[ppid] )
         pmem = client.pilots[ppid]:memory()
         pmem.comm_no = _("NOTICE: Staying in chat will get you killed or disconnected. Caveat user!")
         print("created pilot for " .. tostring(ppid))
@@ -290,10 +297,11 @@ client.synchronize = function( world_state )
         else    -- if we want to sync self from server, do it here
             local ppme = player.pilot()
             local pdiff = vec2.add( ppme:pos() , -ppinfo.posx, -ppinfo.posy ):mod()
+            local fudge = 2
             local mdiff = (
-                math.abs( vec2.new( ppinfo.velx + 6, ppinfo.vely + 6):mod() * 6 ) + 4
+                math.abs( vec2.new( ppinfo.velx + fudge, ppinfo.vely + fudge):mod() * fudge ) + fudge 
             ) * frames_passed
-            if pdiff > mdiff * 3.36 or ( resync and (pdiff >= mdiff and soft_sync == 0)) or hard_resync then
+            if pdiff > mdiff * 1.36 or ( resync and (pdiff >= mdiff and soft_sync == 0)) or hard_resync then
                 ppme:setPos( vec2.new(ppinfo.posx, ppinfo.posy) )
                 if hard_resync then
                   ppme:setVel( vec2.new(ppinfo.velx, ppinfo.vely) )
@@ -310,16 +318,25 @@ client.synchronize = function( world_state )
 
 end
 
+local function safe_send ( dat )
+    if client.server:state() == "connected" then
+        client.server:send( dat )
+    else
+        print("Cannot send in unconnected state: " .. client.server:state())
+        client.alive = nil
+    end
+end
+
 local function activate_outfits( )
     local activelines = ""
     local actives = player.pilot():actives()
     for ii, oo in ipairs(actives) do
-        if oo.state == "on" then
-            activeline = activeline .. usable_outfits[oo.name] .. "\n"
+        if oo.state == "on" and usable_outfits[oo.name] then
+            activelines = activelines .. usable_outfits[oo.name] .. "\n"
         end
     end
-    safe_send(
-        fmt.f(
+    if activelines:len() > 0 then
+        message = fmt.f(
             "{key}\n{ident}\n{actives}",
             {
                 key = common.ACTIVATE_OUTFIT,
@@ -327,15 +344,7 @@ local function activate_outfits( )
                 actives = activelines
             }
         )
-    )
-end
-
-local function safe_send ( dat )
-    if client.server:state() == "connected" then
-        client.server:send( dat )
-    else
-        print("Cannot send in unconnected state: " .. client.server:state())
-        client.alive = nil
+        safe_send( message )
     end
 end
 
@@ -492,6 +501,8 @@ end
 
 
 MP_INPUT_HANDLERS.weapset7 = activate_outfits
+MP_INPUT_HANDLERS.weapset8 = activate_outfits
+MP_INPUT_HANDLERS.weapset9 = activate_outfits
 
 MULTIPLAYER_CLIENT_UPDATE = function() return client.update() end
 function MULTIPLAYER_CLIENT_INPUT ( inputname, inputpress, args)
