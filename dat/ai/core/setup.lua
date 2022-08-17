@@ -17,6 +17,11 @@ local usable_outfits = {
    ["The Bite"]                  = "bite",
    ["The Bite - Improved"]       = "bite",
    ["The Bite - Blood Lust"]     = {"bite", "bite_lust"},
+   -- afterburners
+   ["Unicorp Light Afterburner"] = "afterburner",
+   ["Unicorp Medium Afterburner"] = "afterburner",
+   ["Hellburner"] = "afterburner",
+   ["Hades Torch"] = "afterburner",
 }
 
 if __debugging then
