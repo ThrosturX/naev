@@ -61,7 +61,7 @@ local ships = {
     "Pirate Admonisher"
 }
 
-local MAX_NPCS = 1
+local MAX_NPCS = 6
 -- spawn an NPC
 local function createNpc( shiptype )
     local count = 0
