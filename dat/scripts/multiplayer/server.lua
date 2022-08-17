@@ -13,7 +13,7 @@ local server = {}
         server.world_state = { player_id = player_info, ... }
   
         server.start()
-        server.synchronize_player( sender_info )
+        server.synchronize_player( peer, sender_info )
         server.update()
 --]]
 
@@ -209,7 +209,7 @@ MESSAGE_HANDLERS[common.REQUEST_UPDATE] = function ( peer, data )
             end
 
             -- synchronize this players info
-            server.synchronize_player( data[1] )
+            server.synchronize_player( peer, data[1] )
 
             -- send this player the requested world state
             sendMessage( peer, common.RECEIVE_UPDATE, server.world_state, "unreliable" )
@@ -310,7 +310,7 @@ server.start = function( port )
 end
 
 -- synchronize one player update after receiving
-server.synchronize_player = function( player_info_str )
+server.synchronize_player = function( peer, player_info_str )
   --print( player_info_str )
     local ppinfo = common.unmarshal( player_info_str )
     local ppid = ppinfo.id
