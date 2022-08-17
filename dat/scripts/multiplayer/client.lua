@@ -267,7 +267,7 @@ client.synchronize = function( world_state )
                     local anum = tonumber(ppinfo.accel)
                     if anum == 1 then
                         pilot.pushtask( client.pilots[ppid], "REMOTE_CONTROL_ACCEL", 1 )
-                    else -- if resync then
+                    elseif resync then
                         pilot.pushtask( client.pilots[ppid], "REMOTE_CONTROL_ACCEL", 0 )
                     end
                 end
