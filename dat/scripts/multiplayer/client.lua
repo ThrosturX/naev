@@ -386,7 +386,7 @@ client.update = function( timeout )
         event = client.host:service()
     end
     
-    if soft_sync > -2 then
+    if soft_sync > 2 then
         -- tell the server what we know and ask for next resync
         safe_send( common.REQUEST_UPDATE .. '\n' .. _marshal( client.pilots ) )
         soft_sync = 0

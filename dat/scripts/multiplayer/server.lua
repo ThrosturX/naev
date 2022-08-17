@@ -331,10 +331,22 @@ server.synchronize_player = function( player_info_str )
         ) * 3
         if dist2 >= speed2 then
             print("WARNING: Refusing to synchronize player " .. ppid)
+            --[[
             if rnd.rnd(0, 160) == 0 then
                 common.sync_player( ppid, ppinfo, server.players )
             end
             server.players[ppid]:setHealth(ppinfo.armour - 1, ppinfo.shield, ppinfo.stress + 1)
+            ]]--
+            -- respawn the player in the right ship
+            local message_data = fmt.f(
+               "{ppid}\n{ship_type}\n{outfits}\n",
+               {
+                   ppid = ppid,
+                   ship_type = server.players[ppid]:ship():nameRaw(),
+                   outfits = common.marshal_outfits( server.players[ppid]:outfitsList() ),
+               }
+            )
+            sendMessage( peer, common.ADD_PILOT, message_data, "reliable" )
         else
             -- server side sync
             server.players[ppid]:setPos(vec2.new(tonumber(ppinfo.posx), tonumber(ppinfo.posy)))
