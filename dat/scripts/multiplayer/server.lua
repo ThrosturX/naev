@@ -179,7 +179,7 @@ MESSAGE_HANDLERS[common.REQUEST_UPDATE] = function ( peer, data )
             known_pilots[player_id] = true
             for ii, line in ipairs( data ) do
                 if ii > 1 then
-                    for opid, opship in string.gmatch(line, "(%w+)=([%w|%s]+)") do
+                    for opid, opship in string.gmatch(line, "(%w+)=([%w|%s|']+)") do
                         if server.players[opid] and server.players[opid]:exists() and opship == server.players[opid]:ship():nameRaw() then
                             known_pilots[opid] = true
                             --print("known: " .. tostring(opid) .. " in " .. tostring(opship))

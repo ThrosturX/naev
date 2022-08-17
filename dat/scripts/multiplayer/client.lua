@@ -166,7 +166,6 @@ client.spawn = function( ppid, shiptype, shipname , outfits, ai )
         nil, "Multiplayer", "Multiplayer",
         { ai = ai, clear_allies = true, clear_enemies = true } 
     )
-    print(ppid, shiptype, shipname)
     if ppid ~= client.playerinfo.nick and (not client.pilots[ppid] or client.pilots[ppid]:ship():nameRaw() ~= shiptype) then
         client.pilots[ppid] = pilot.add(
             shiptype,
@@ -195,11 +194,14 @@ client.spawn = function( ppid, shiptype, shipname , outfits, ai )
             client.alive = true
             hard_resync = true
         else
-            hard_resync = true
+            hard_resync = false
             client.alive = false
         end
     else
         print("WARNING: Trying to add already existing pilot: " .. tostring(ppid))
+        if ppid ~= client.playerinfo.nick and client.pilots[ppid] and client.pilots[ppid]:ship():nameRaw() ~= shiptype then
+            print("should be in a <" .. client.pilots[ppid]:ship():nameRaw() .. "> but is in a <" .. shiptype .. ">")
+        end
     end
 end
 

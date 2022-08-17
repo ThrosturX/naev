@@ -136,7 +136,7 @@ common.receivers[common.RECEIVE_UPDATE] = function ( client, message )
     world_state.players = {}
     for _ii, player_line in ipairs( message ) do
         local this_player = parsePlayer( player_line )
-        world_state.players[this_player.id] =  unmarshal( this_player )
+        world_state.players[this_player.id] = unmarshal( this_player )
     end
 
     return client.synchronize( world_state )
@@ -170,7 +170,13 @@ end
 --]]
 common.receivers[common.SEND_MESSAGE] = function ( client, message )
     if #message >= 1 then
-        pilot.comm( message[2] or "Unknown", message[1] )
+        local player_id = message[2]
+        local oplt = client.pilots[player_id]
+        if oplt and oplt:exists() then
+            oplt:broadcast( message[1], true )
+        else
+            pilot.comm( player_id or "Unknown", message[1] )
+        end
     end
 end
 
