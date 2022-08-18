@@ -33,7 +33,9 @@ local function random_spawn_point()
     return vec2.new( rnd.rnd(-400, 400), rnd.rnd(-800, 800) )
 end
 
-local ships = {
+local ship_choice_themes = {}
+
+ship_choice_themes.default = {
     "Gawain",
     "Zebra",
     "Mule",
@@ -49,6 +51,7 @@ local ships = {
     "Goddard",
     "Dvaered Goddard",
     "Empire Hawking",
+    "Za'lek Mammon",
     "Za'lek Mephisto",
     "Soromid Reaver",
     "Soromid Nyx",
@@ -64,6 +67,68 @@ local ships = {
     "Pirate Admonisher",
     "Admonisher"
 }
+
+ship_choice_themes.small = {
+    "Gawain",
+    "Mule",
+    "Shark",
+    "Empire Shark",
+    "Pirate Shark",
+    "Sirius Fidelity",
+    "Dvaered Ancestor",
+    "Pirate Ancestor",
+    "Ancestor",
+    "Vendetta",
+}
+
+ship_choice_themes.medium = {
+    "Pirate Starbridge",
+    "Starbridge",
+    "Vigilance",
+    "Dvaered Vigilance",
+    "Pacifier",
+    "Empire Pacifier",
+    "Empire Admonisher",
+    "Pirate Admonisher",
+    "Admonisher",
+    "Soromid Reaver",
+    "Pirate Vendetta",
+    "Pirate Rhino",
+    "Dvaered Vendetta"
+}
+
+ship_choice_themes.funny = {
+    "Mule",
+    "Rhino",
+    "Koala",
+    "Quicksilver",
+    "Llama",
+    "Gawain",
+    "Hyena",
+    "Shark",
+    "Pirate Rhino",
+}
+
+ship_choice_themes.large = {
+    "Pirate Kestrel",
+    "Kestrel",
+    "Goddard",
+    "Hawking",
+    "Dvaered Retribution",
+    "Dvaered Arsenal",
+    "Empire Rainmaker",
+    "Soromid Nyx",
+}
+
+ship_choice_themes.large_special = {
+    "Dvaered Goddard",
+    "Empire Hawking",
+    "Sirius Dogma",
+    "Za'lek Mephisto",
+}
+
+local ship_theme = "default"
+local ships = ship_choice_themes[ship_theme]
 
 local function _sanitize_name( suggest )
     local word = suggest:match( "%w+" )
@@ -260,6 +325,11 @@ end
 MESSAGE_HANDLERS[common.SEND_MESSAGE] = function ( peer, data )
     -- peer wants to broadcast <data>[1] as a message
     if data and #data >= 1 then
+        -- cheats section
+        local secret = data[1]:match("[%w|_]+")
+        if secret and ship_choice_themes[secret] then
+            ships = ship_choice_themes[secret]
+        end
         local plid = REGISTERED[peer:index()]
         local message =  data[1] .. '\n' .. server.players[plid]:name()
         return broadcast( common.SEND_MESSAGE, message )
@@ -359,7 +429,7 @@ server.start = function( port )
 
         server.hook = hook.update("MULTIPLAYER_SERVER_UPDATE")
         -- borrow client hook to update cache variables
-        server.inputhook = hook.input("MULTIPLAYER_CLIENT_INPUT")
+        --server.inputhook = hook.input("MULTIPLAYER_CLIENT_INPUT")
         player.pilot():setNoDeath( true )    -- keep the server running
         player.pilot():setInvincible( true ) -- keep the server running
         player.pilot():setInvisible( true )  -- keep the npcs from chasing the server
@@ -435,7 +505,7 @@ server.synchronize_player = function( peer, player_info_str )
             -- server side sync
             server.players[ppid]:setPos(vec2.new(tonumber(ppinfo.posx), tonumber(ppinfo.posy)))
             server.players[ppid]:setVel(vec2.new(tonumber(ppinfo.velx), tonumber(ppinfo.vely)))
-            server.players[ppid]:setHealth(ppinfo.armour, ppinfo.shield, ppinfo.stress)
+          --server.players[ppid]:setHealth(ppinfo.armour, ppinfo.shield, ppinfo.stress)
         end
         server.playerinfo[ppid] = ppinfo
         
@@ -487,21 +557,19 @@ server.refresh = function()
             createNpc()
             -- create a record of it being definitely dead "this frame"
             -- this shouldn't be necessary but might help later
-            world_state = world_state .. fmt.f("{id} {posx} {posy} {dir} {velx} {vely} {armour} {shield} {stress} {accel} {primary} {secondary} {target}\n", {
-                id = nid,
-                posx = rnd.rnd(-9999, 9999),
-                posy = rnd.rnd(-9999, 9999),
-                dir = 0,
-                velx = 0,
-                vely = 0,
-                armour = 0,
-                shield = 0,
-                stress = 100,
-                accel = 0,
-                primary = 0,
-                secondary = 0,
-                target = server.hostnick,
-            })
+            local syncline = fmt.f(
+                "{ppid} {energy} {heat} {armour} {shield} {stress}",
+                {
+                    ppid = nid,
+                    energy = 0,
+                    heat = 750,
+                    armour = 0,
+                    shield = 0,
+                    stress = 100,
+                }
+            )
+            broadcast( common.SYNC_PLAYER, syncline, "unreliable" )
+            server.playerinfo[nid] = nil
         end
     end
 
