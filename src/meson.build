@@ -67,6 +67,7 @@ source = files(
    'msgcat.c',
    'music.c',
    'naev.c',
+   'naev_version.c',
    'ndata.c',
    'nebula.c',
    'news.c',
