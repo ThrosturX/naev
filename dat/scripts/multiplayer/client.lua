@@ -480,6 +480,7 @@ function enterMultiplayer()
     
     client.hook = hook.update("MULTIPLAYER_CLIENT_UPDATE")
     client.inputhook = hook.input("MULTIPLAYER_CLIENT_INPUT")
+    player.pilot():setNoDeath( true )
 end
 
 local MP_INPUT_HANDLERS = {}

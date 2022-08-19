@@ -528,8 +528,9 @@ server.synchronize_player = function( peer, player_info_str )
         if ppinfo.armour > armour * 1.02 or ppinfo.shield > shield * 1.02 or ppinfo.stress > stress + 10 then
             broadcast( common.SYNC_PLAYER, syncline, "unreliable" )
             server.players[ppid]:fillAmmo()
-        elseif rnd.rnd(0, 13) == 0 then
+        elseif math.abs(rnd.twosigma()) >= 1.5 then
             sendMessage( peer, common.SYNC_PLAYER, syncline, "reliable" )
+            server.players[ppid]:fillAmmo()
         end
         common.sync_player( ppid, ppinfo, server.players )
     end
