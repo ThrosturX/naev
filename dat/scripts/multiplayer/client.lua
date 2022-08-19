@@ -211,6 +211,8 @@ client.spawn = function( ppid, shiptype, shipname , outfits, ai )
             for _ii, oplt in ipairs(client.pilots) do
                 oplt:setHealth(0)
             end
+            -- stay alive to get a new ship if we die
+            player.pilot():setNoDeath( true )
         else
             hard_resync = false
             client.alive = false
@@ -265,7 +267,7 @@ client.synchronize = function( world_state )
                     local rtt = client.server:round_trip_time()
                     local pdv = vec2.new(
                         ppinfo.velx, ppinfo.vely
-                    ) + dv * last_resync / 60
+                    ) + dv * frames_passed -- last_resync / 60
                     client.pilots[ppid]:setVel(pdv)
                 elseif math.abs(ppinfo.velx * ppinfo.vely) < 1 then
                     -- ensure low-speed fidelity
@@ -273,7 +275,7 @@ client.synchronize = function( world_state )
                 end
                 client.pilots[ppid]:setDir(ppinfo.dir)
                 client.pilots[ppid]:setHealth(
-                    math.min(100, ppinfo.armour + 15),
+                    math.min(100, 5 + ppinfo.armour + rnd.rnd(10, 15)),
                     math.max( rnd.rnd(0, 2), ppinfo.shield ),
                     ppinfo.stress
                 )
@@ -480,7 +482,6 @@ function enterMultiplayer()
     
     client.hook = hook.update("MULTIPLAYER_CLIENT_UPDATE")
     client.inputhook = hook.input("MULTIPLAYER_CLIENT_INPUT")
-    player.pilot():setNoDeath( true )
 end
 
 local MP_INPUT_HANDLERS = {}
