@@ -46,9 +46,6 @@
 #include "nluadef.h"
 #include "nstring.h"
 
-/* From lua-enet, which doesn't bother with header files. What a king? */
-extern int luaopen_enet(lua_State *l);
-
 lua_State *naevL = NULL;
 nlua_env __NLUA_CURENV = LUA_NOREF;
 static char *common_script; /**< Common script to run when creating environments. */
@@ -508,16 +505,12 @@ static int nlua_loadBasic( lua_State* L )
    luaL_register(L, "gettext", gettext_methods);
 
    /* Sandbox "io" and "os". */
-   if (conf.sandbox_io) {
-      lua_newtable(L); /* io table */
-      lua_setglobal(L,"io");
-   }
-   if (conf.sandbox_os) {
-      lua_newtable(L); /* os table */
-      lua_pushcfunction(L, nlua_os_getenv);
-      lua_setfield(L,-2,"getenv");
-      lua_setglobal(L,"os");
-   }
+   lua_newtable(L); /* io table */
+   lua_setglobal(L,"io");
+   lua_newtable(L); /* os table */
+   lua_pushcfunction(L, nlua_os_getenv);
+   lua_setfield(L,-2,"getenv");
+   lua_setglobal(L,"os");
 
    /* Special math functions function. */
    lua_getglobal(L,"math");
