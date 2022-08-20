@@ -147,6 +147,7 @@ void conf_setDefaults (void)
    conf.nosave       = 0;
    conf.devmode      = 0;
    conf.devautosave  = 0;
+   conf.lua_enet     = 0;
    conf.lua_repl     = 0;
    conf.sandbox_io   = 1;
    conf.sandbox_os   = 1;
@@ -405,6 +406,7 @@ int conf_loadConfig ( const char* file )
       conf_loadFloat( lEnv, "autonav_reset_shield", conf.autonav_reset_shield );
       conf_loadBool( lEnv, "devmode", conf.devmode );
       conf_loadBool( lEnv, "devautosave", conf.devautosave );
+      conf_loadBool( lEnv, "lua_enet", conf.lua_enet );
       conf_loadBool( lEnv, "lua_repl", conf.lua_repl );
       conf_loadBool( lEnv, "sandbox_io", conf.sandbox_io );
       conf_loadBool( lEnv, "sandbox_os", conf.sandbox_os );
@@ -1042,6 +1044,8 @@ int conf_saveConfig ( const char* file )
    conf_saveBool("devautosave",conf.devautosave);
    conf_saveEmptyLine();
 
+   conf_saveComment(_("Enable the lua-enet library, for use by online/multiplayer mods (CAUTION: online Lua scripts may have security vulnerabilities!)"));
+   conf_saveBool("lua_enet",conf.lua_enet);
    conf_saveComment(_("Enable the experimental CLI based on lua-repl."));
    conf_saveBool("lua_repl",conf.lua_repl);
    conf_saveEmptyLine();

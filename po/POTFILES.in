@@ -2550,6 +2550,9 @@ dat/events/news/thurion.lua
 dat/events/news/zalek.lua
 dat/events/news/zalek_campaign.lua
 dat/events/npc.lua
+dat/events/npc/empire.lua
+dat/events/npc/generic.lua
+dat/events/npc/zalek.lua
 dat/events/pers.lua
 dat/events/pers/dvaered.lua
 dat/events/pers/empire.lua
@@ -2901,6 +2904,7 @@ dat/scripts/common/minerva.lua
 dat/scripts/common/nebu_research.lua
 dat/scripts/common/nebula.lua
 dat/scripts/common/neutral.lua
+dat/scripts/common/npc.lua
 dat/scripts/common/pirate.lua
 dat/scripts/common/poi.lua
 dat/scripts/common/sciencegonewrong.lua
@@ -3176,6 +3180,8 @@ src/load.c
 src/load.h
 src/log.c
 src/log.h
+src/lua_enet.c
+src/lua_enet.h
 src/lutf8lib.c
 src/lutf8lib.h
 src/lvar.c
