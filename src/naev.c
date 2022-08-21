@@ -98,12 +98,12 @@
 #define VERSION_FILE    "VERSION" /**< Version file by default. */
 
 static int quit               = 0; /**< For primary loop */
+Uint32 SDL_LOOPDONE           = 0; /**< For custom event to exit loops. */
 static unsigned int time_ms   = 0; /**< used to calculate FPS and movement. */
 static SDL_Surface *naev_icon = NULL; /**< Icon. */
 static int fps_skipped        = 0; /**< Skipped last frame? */
 /* Version stuff. */
 static semver_t version_binary; /**< Naev binary version. */
-static char version_human[STRMAX_SHORT]; /**< Human readable version. */
 
 /*
  * FPS stuff.
@@ -182,14 +182,15 @@ int main( int argc, char** argv )
             _( PHYSFS_getErrorByCode( PHYSFS_getLastErrorCode() ) ) );
       return -1;
    }
+   PHYSFS_permitSymbolicLinks( 1 );
 
    /* Set up locales. */
    gettext_init();
    init_linebreak();
 
    /* Parse version. */
-   if (semver_parse( VERSION, &version_binary ))
-      WARN( _("Failed to parse version string '%s'!"), VERSION );
+   if (semver_parse( naev_version( 0 ), &version_binary ))
+      WARN( _("Failed to parse version string '%s'!"), naev_version( 0 ) );
 
    /* Print the version */
    LOG( " %s v%s (%s)", APPNAME, naev_version(0), HOST );
@@ -205,6 +206,7 @@ int main( int argc, char** argv )
       return -1;
    }
    starttime = SDL_GetTicks();
+   SDL_LOOPDONE = SDL_RegisterEvents(1);
 
    /* Initialize the threadpool */
    threadpool_init();
@@ -1022,31 +1024,6 @@ static void window_caption (void)
    SDL_SetWindowTitle( gl_screen.window, buf );
    SDL_SetWindowIcon( gl_screen.window, naev_icon );
    free( buf );
-}
-
-/**
- * @brief Returns the version in a human readable string.
- *
- *    @param long_version Returns the long version if it's long.
- *    @return The human readable version string.
- */
-char *naev_version( int long_version )
-{
-   /* Set up the long version. */
-   if (long_version) {
-      if (version_human[0] == '\0')
-         snprintf( version_human, sizeof(version_human),
-               " "APPNAME" v%s%s - %s", VERSION,
-#ifdef DEBUGGING
-               _(" debug"),
-#else /* DEBUGGING */
-               "",
-#endif /* DEBUGGING */
-               start_name() );
-      return version_human;
-   }
-
-   return VERSION;
 }
 
 static int binary_comparison( int x, int y )

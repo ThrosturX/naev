@@ -86,7 +86,7 @@ function luaspob.can_land ()
    end
    local fct = mem.spob:faction()
    if not fct then
-      return false, mem.msg_denied
+      return true,nil -- Use default landing message
    end
    local std = fct:playerStanding()
    if std < 0 then

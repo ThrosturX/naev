@@ -129,6 +129,7 @@ dat/outfits/accessory/broken_nebular_shielding_prototype.xml
 dat/outfits/accessory/commemorative_stein.xml
 dat/outfits/accessory/dv_handbook.xml
 dat/outfits/accessory/fuzzy_dice.xml
+dat/outfits/accessory/key_chain.xml
 dat/outfits/accessory/left_boot.xml
 dat/outfits/accessory/love_letter.xml
 dat/outfits/accessory/pentagram_of_valor.xml
@@ -2404,7 +2405,6 @@ dat/ai/core/attack/corvette.lua
 dat/ai/core/attack/drone.lua
 dat/ai/core/attack/fighter.lua
 dat/ai/core/attack/generic.lua
-dat/ai/core/attack/setup.lua
 dat/ai/core/attack/util.lua
 dat/ai/core/basic.lua
 dat/ai/core/control/escort.lua
@@ -2421,6 +2421,7 @@ dat/ai/core/idle/wait.lua
 dat/ai/core/misc/distress.lua
 dat/ai/core/misc/lanes.lua
 dat/ai/core/misc/scans.lua
+dat/ai/core/setup.lua
 dat/ai/drone_miner.lua
 dat/ai/dummy.lua
 dat/ai/dvaered.lua
@@ -2523,7 +2524,6 @@ dat/events/neutral/baron_flintley.lua
 dat/events/neutral/baron_prowl.lua
 dat/events/neutral/derelict.lua
 dat/events/neutral/kidnapped.lua
-dat/events/neutral/npc.lua
 dat/events/neutral/shadow_comm.lua
 dat/events/neutral/shadow_comm2.lua
 dat/events/neutral/shiplover.lua
@@ -2545,11 +2545,18 @@ dat/events/news/soromid.lua
 dat/events/news/thurion.lua
 dat/events/news/zalek.lua
 dat/events/news/zalek_campaign.lua
+dat/events/npc.lua
+dat/events/npc/empire.lua
+dat/events/npc/generic.lua
+dat/events/npc/zalek.lua
 dat/events/pers.lua
+dat/events/pers/dvaered.lua
 dat/events/pers/empire.lua
 dat/events/pers/indep.lua
 dat/events/pers/minerva.lua
 dat/events/pers/pirate.lua
+dat/events/pers/soromid.lua
+dat/events/pers/zalek.lua
 dat/events/pirate/fake_transponder.lua
 dat/events/pirate/shipcheck.lua
 dat/events/proteron/blockade.lua
@@ -2655,6 +2662,7 @@ dat/missions/dvaered/recruitment/dv_goddard.lua
 dat/missions/dvaered/recruitment/dv_intelligence.lua
 dat/missions/dvaered/recruitment/dv_lostagent.lua
 dat/missions/dvaered/recruitment/dv_propaganda.lua
+dat/missions/dvaered/recruitment/dv_shopping.lua
 dat/missions/empire/collective/ec00.lua
 dat/missions/empire/collective/ec01.lua
 dat/missions/empire/collective/ec02.lua
@@ -2890,6 +2898,7 @@ dat/scripts/common/minerva.lua
 dat/scripts/common/nebu_research.lua
 dat/scripts/common/nebula.lua
 dat/scripts/common/neutral.lua
+dat/scripts/common/npc.lua
 dat/scripts/common/pirate.lua
 dat/scripts/common/poi.lua
 dat/scripts/common/sciencegonewrong.lua
@@ -3162,6 +3171,8 @@ src/load.c
 src/load.h
 src/log.c
 src/log.h
+src/lua_enet.c
+src/lua_enet.h
 src/lutf8lib.c
 src/lutf8lib.h
 src/lvar.c
@@ -3190,6 +3201,7 @@ src/music.c
 src/music.h
 src/naev.c
 src/naev.h
+src/naev_version.c
 src/ncompat.h
 src/ndata.c
 src/ndata.h

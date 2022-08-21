@@ -34,9 +34,10 @@
 #define GRAPHIC_WIDTH  256 /**< Width of graphic. */
 #define GRAPHIC_HEIGHT 256 /**< Height of graphic. */
 
-static Spob *comm_spob         = NULL; /**< Spob currently talking to. */
-static int comm_commClose      = 0; /**< Close comm when done. */
-static nlua_env comm_env       = LUA_NOREF; /**< Comm Lua env. */
+static Spob *comm_spob     = NULL; /**< Spob currently talking to. */
+static int comm_commClose  = 0; /**< Close comm when done. */
+static nlua_env comm_env   = LUA_NOREF; /**< Comm Lua env. */
+static int comm_open       = 0;
 
 /*
  * Prototypes.
@@ -45,13 +46,11 @@ static nlua_env comm_env       = LUA_NOREF; /**< Comm Lua env. */
 static const char* comm_getString( const Pilot *p, const char *str );
 
 /**
- * @brief Checks to see if comm is open.
- *
- *    @return 1 if comm is open.
+ * @brief Check to see if the comm window is open.
  */
 int comm_isOpen (void)
 {
-   return window_exists( "wdwComm" );
+   return comm_open;
 }
 
 /**
@@ -72,7 +71,6 @@ int comm_openPilot( unsigned int pilot )
 {
    const char *msg;
    char c;
-   unsigned int wid;
    Pilot *p;
    Pilot *const* pltstk;
 
@@ -89,13 +87,6 @@ int comm_openPilot( unsigned int pilot )
          pilot_inRangePilot( player.p, p, NULL ) <= 0) {
       player_message(_("#rTarget is out of communications range"));
       return -1;
-   }
-
-   /* Destroy the window if it's already present. */
-   wid = window_get( "wdwComm" );
-   if (wid > 0) {
-      window_destroy( wid );
-      return 0;
    }
 
    /* Must not be jumping. */
@@ -174,6 +165,8 @@ int comm_openPilot( unsigned int pilot )
       free(buf);
    }
 
+   comm_open = 1;
+
    /* Run Lua. */
    nlua_getenv(naevL, comm_env,"comm");
    lua_pushpilot(naevL, p->id);
@@ -181,6 +174,8 @@ int comm_openPilot( unsigned int pilot )
       WARN( _("Comm: '%s'"), lua_tostring(naevL,-1));
       lua_pop(naevL,1);
    }
+
+   comm_open = 0;
 
    return 0;
 }
@@ -193,15 +188,6 @@ int comm_openPilot( unsigned int pilot )
  */
 int comm_openSpob( Spob *spob )
 {
-   unsigned int wid;
-
-   /* Destroy the window if it's already present. */
-   wid = window_get( "wdwComm" );
-   if (wid > 0) {
-      window_destroy( wid );
-      return 0;
-   }
-
    /* Must not be disabled. */
    if (!spob_hasService(spob, SPOB_SERVICE_INHABITED)) {
       player_message(_("%s does not respond."), spob_name(spob));
@@ -210,12 +196,14 @@ int comm_openSpob( Spob *spob )
 
    /* Lua stuff. */
    if (spob->lua_comm != LUA_NOREF) {
+      comm_open = 1;
       spob_luaInitMem( spob );
       lua_rawgeti(naevL, LUA_REGISTRYINDEX, spob->lua_comm); /* f */
       if (nlua_pcall( spob->lua_env, 0, 0 )) {
          WARN(_("Spob '%s' failed to run '%s':\n%s"), spob->name, "comm", lua_tostring(naevL,-1));
          lua_pop(naevL,1);
       }
+      comm_open = 0;
       return 0;
    }
 

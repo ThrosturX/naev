@@ -216,7 +216,7 @@ She cackles maniacally.]]))
 She cackles maniacally.
 "Nice to meet you! My name is Nelly!"]]))
       vn.func( function ()
-         vn.push( "nelly_met", true )
+         var.push( "nelly_met", true )
       end )
    end
 
@@ -319,7 +319,7 @@ function heartbeat ()
 
    elseif cutscene == 2 then
       if nelly:pos():dist( player.pos() ) < 1000 then
-         nemesis = pilot.add( "Ancestor", fct_nemesis, pos + vec2.new( 5000, rnd.angle() ), _("Nemesis") )
+         nemesis = pilot.add( "Koala", fct_nemesis, pos + vec2.new( 5000, rnd.angle() ), _("Nemesis") )
          nelly:broadcast(_("Wait? We were followed?"))
          cutscene = 3
          broadcasted = 0

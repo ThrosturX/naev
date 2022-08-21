@@ -49,6 +49,7 @@ static LuaAudioEfx_t *lua_efx = NULL;
 static int stream_thread( void *la_data );
 static int stream_loadBuffer( LuaAudio_t *la, ALuint buffer );
 static void rg_filter( float **pcm, long channels, long samples, void *filter_param );
+static int audio_genSource( ALuint *source );
 
 /* Audio methods. */
 static int audioL_gc( lua_State *L );
@@ -384,7 +385,7 @@ void audio_cleanup( LuaAudio_t *la )
          break;
       case LUA_AUDIO_STATIC:
          soundLock();
-         if (la->source > 0)
+         if (alIsSource( la->source )==AL_TRUE)
             alDeleteSources( 1, &la->source );
          /* Check if buffers need freeing. */
          if (la->buf != NULL) {
@@ -409,9 +410,9 @@ void audio_cleanup( LuaAudio_t *la )
                WARN(_("Timed out while waiting for audio thread to finish!"));
 #endif /* DEBUGGING */
          }
-         if (la->source > 0)
+         if (alIsSource( la->source )==AL_TRUE)
             alDeleteSources( 1, &la->source );
-         if (la->stream_buffers[0] > 0)
+         if (alIsBuffer( la->stream_buffers[0] )==AL_TRUE)
             alDeleteBuffers( 2, la->stream_buffers );
          if (la->cond != NULL)
             SDL_DestroyCond( la->cond );
@@ -461,6 +462,38 @@ static int audioL_eq( lua_State *L )
    a2 = luaL_checkaudio(L,2);
    lua_pushboolean( L, (memcmp( a1, a2, sizeof(LuaAudio_t) )==0) );
    return 1;
+}
+
+/**
+ * @brief Tries to generate a single openal source, running GC if necessary.
+ */
+static int audio_genSource( ALuint *source )
+{
+   ALenum err;
+   alGenSources( 1, source );
+   if (alIsSource( *source)==AL_TRUE)
+      return 0;
+   err = alGetError();
+   switch (err) {
+      case AL_NO_ERROR:
+         break;
+      case AL_OUT_OF_MEMORY:
+         /* Assume that we need to collect audio stuff. */
+         soundUnlock();
+         lua_gc( naevL, LUA_GCCOLLECT, 0 );
+         soundLock();
+         /* Try to create source again. */
+         alGenSources( 1, source );
+         al_checkErr();
+         break;
+
+      default:
+#if DEBUGGING
+         al_checkHandleError( err, __func__, __LINE__ );
+#endif /* DEBUGGING */
+         return -1;
+   }
+   return 0;
 }
 
 /**
@@ -518,7 +551,7 @@ static int audioL_new( lua_State *L )
 #endif /* DEBUGGING */
 
    soundLock();
-   alGenSources( 1, &la.source );
+   audio_genSource( &la.source );
 
    /* Deal with stream. */
    if (!stream) {
@@ -602,7 +635,7 @@ void audio_clone( LuaAudio_t *la, const LuaAudio_t *source )
    }
 
    soundLock();
-   alGenSources( 1, &la->source );
+   audio_genSource( &la->source );
 
    switch (la->type) {
       case LUA_AUDIO_STATIC:
@@ -614,8 +647,11 @@ void audio_clone( LuaAudio_t *la, const LuaAudio_t *source )
          alSourcei( la->source, AL_BUFFER, la->buf->buffer );
          break;
 
-      case LUA_AUDIO_NULL:
       case LUA_AUDIO_STREAM:
+         WARN(_("Unimplemented"));
+         break;
+
+      case LUA_AUDIO_NULL:
          break;
    }
 
@@ -728,12 +764,46 @@ static int audioL_isPaused( lua_State *L )
  */
 static int audioL_stop( lua_State *L )
 {
+   ALint alstate;
+   ALuint removed[2];
    LuaAudio_t *la = luaL_checkaudio(L,1);
    if (sound_disabled)
       return 0;
 
    soundLock();
-   alSourceStop( la->source );
+   switch (la->type) {
+      case LUA_AUDIO_NULL:
+         break;
+      case LUA_AUDIO_STATIC:
+         alSourceStop( la->source );
+         break;
+
+      case LUA_AUDIO_STREAM:
+         /* Kill the thread first. */
+         if (la->th != NULL) {
+            la->active = -1;
+            if (SDL_CondWaitTimeout( la->cond, sound_lock, 3000 ) == SDL_MUTEX_TIMEDOUT)
+#if DEBUGGING
+               WARN(_("Timed out while waiting for audio thread of '%s' to finish!"), la->name);
+#else /* DEBUGGING */
+               WARN(_("Timed out while waiting for audio thread to finish!"));
+#endif /* DEBUGGING */
+         }
+         la->th = NULL;
+
+         /* Stopping a source will make all buffers become processed. */
+         alSourceStop( la->source );
+
+         /* Unqueue the buffers. */
+         alGetSourcei( la->source, AL_BUFFERS_PROCESSED, &alstate );
+         alSourceUnqueueBuffers( la->source, alstate, removed );
+
+         /* Seek the stream to the beginning. */
+         SDL_mutexP( la->lock );
+         ov_pcm_seek( &la->stream, 0 );
+         SDL_mutexV( la->lock );
+         break;
+   }
    al_checkErr();
    soundUnlock();
    return 0;

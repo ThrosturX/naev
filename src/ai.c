@@ -2094,7 +2094,6 @@ static int aiL_drift_facing( lua_State *L )
  *    @luatreturn boolean Whether braking is finished.
  *    @luafunc brake
  */
-
 static int aiL_brake( lua_State *L )
 {
    int ret = pilot_brake( cur_pilot );
@@ -2571,7 +2570,7 @@ static int aiL_relvel( lua_State *L )
 
 /**
  * @brief Computes the point to face in order to
- *        follow an other pilot using a PD controller.
+ *        follow another pilot using a PD controller.
  *
  *    @luatparam Pilot target The pilot to follow
  *    @luatparam number radius The requested distance between p and target
