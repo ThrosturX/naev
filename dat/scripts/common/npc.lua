@@ -6,6 +6,29 @@ local tut = require "common.tutorial"
 
 local npc = {}
 
+function npc.combine_cond( msglist )
+   local msg_combined = {}
+   for k,msg in ipairs( msglist ) do
+      if msg[1]() then
+         table.insert( msg_combined, msg[2] )
+      end
+   end
+   return msg_combined
+end
+
+function npc.combine_desc( desclist, tags )
+   local descriptions = tcopy( desclist["generic"] )
+   for t,v in pairs(tags) do
+      local dl = desclist[t]
+      if dl then
+         for k,d in ipairs(dl) do
+            table.insert( descriptions, d )
+         end
+      end
+   end
+   return descriptions
+end
+
 function npc.test_misnHint( misnname )
    return function ()
       return not (player.misnDone(misnname) or player.misnActive(misnname))
@@ -29,55 +52,6 @@ function npc.test_evtDone( evtname )
       return player.evtDone(evtname)
    end
 end
-
---[[
-Civilian descriptions for the spaceport bar.
-These descriptions will be picked at random, and may be picked multiple times
-in one generation. Remember that any description can end up with any
-portrait, so don't make any assumptions about the appearance of the NPC!
---]]
-npc.desc_list = {
-   _("This person seems to be here to relax."),
-   _("There is a civilian sitting on one of the tables."),
-   _("There is a civilian sitting there, looking somewhere else."),
-   _("A worker sits at one of the tables, wearing a name tag saying \"Go away\"."),
-   _("A civilian sits at the bar, seemingly serious about the cocktails on offer."),
-   _("A civilian wearing a shirt saying: \"Ask me about Jaegnhild\""),
-   _("There is a civilian sitting in the corner."),
-   _("A civilian feverishly concentrating on a fluorescing drink."),
-   _("A civilian drinking alone."),
-   _("This person seems friendly enough."),
-   _("A civilian sitting at the bar."),
-   _("This person is idly browsing a news terminal."),
-   _("A worker sips a cold drink after a hard shift."),
-   _("A worker slouched against the bar, nursing a drink."),
-   _("This worker seems bored with everything but their drink."),
-}
-
---[[
-Lore messages. These come in general and factional varieties.
-General lore messages will be said by non-faction NPCs, OR by faction NPCs if
-they have no factional text to say. When adding factional text, make sure to
-add it to the table of the appropriate faction. Does your faction not have a
-table? Then just add it. The script will find and use it if it exists. Make
-sure you spell the faction name exactly the same as in faction.xml though!
---]]
-npc.msg_lore = {
-   _([["I heard the nebula is haunted! My uncle Bobby told me he saw one of the ghost ships himself over in Arandon!"]]),
-   _([["I don't believe in those nebula ghost stories. The people who talk about it are just trying to scare you."]]),
-   _([["I heard the Soromid lost their homeworld Sorom in the Incident. Its corpse can still be found in Basel."]]),
-   _([["The Soromid fly organic ships! I heard some of their ships can even repair themselves. That's so weird."]]),
-   _([["Have you seen that ship the Emperor lives on? It's huge! But if you ask me, it looks a bit like a… No, never mind."]]),
-   _([["I wonder why the Sirii are all so devout? I heard they have these special priesty people walking around. I wonder what's so special about them."]]),
-   _([["They say Eduard Manual Goddard is drifting in space somewhere, entombed amidst a cache of his inventions! What I wouldn't give to rummage through there…"]]),
-   _([["Ah man, I lost all my money on Totoran. I love the fights they stage there, but the guys I bet on always lose. What am I doing wrong?"]]),
-   _([["Don't try to fly into the inner nebula. I've known people who tried, and none of them came back."]]),
-   _([["Have you heard of Captain T. Practice? He's amazing, I'm his biggest fan!"]]),
-   _([["I wouldn't travel north from Alteris if I were you, unless you're a good fighter! That area of space has really gone down the drain since the Incident."]]),
-   _([["Sometimes I look at the stars and wonder… are we the only sentient species in the universe?"]]),
-   _([["Hey, you ever wonder why we're here?" You respond that it's one of the great mysteries of the universe. Why are we here? Are we the product of some cosmic coincidence or is there some great cosmic plan for us? You don't know, but it sometimes keeps you up at night. As you say this, the citizen stares at you incredulously. "What?? No, I mean why are we in here, in this bar?"]]),
-   _([["Life is so boring here. I would love to go gamble with all the famous people at Minerva Station."]]),
-}
 
 --[[
 Gameplay tip messages.
@@ -115,40 +89,6 @@ npc.msg_tip = {
    _([["I've heard rumours that a pirate's reputations depends on flying pirate ships, but I think they only loathe peaceful honest work."]]),
    function () return fmt.f(_([["These computer symbols can be confusing sometimes! I've figured it out, though: '{F}' means friendly, '{N}' means neutral, '{H}' means hostile, '{R}' means restricted, and '{U}' means uninhabited but landable. I wish someone had told me that!"]]), {F="#F+#0", N="#N~#0", H="#H!!#0", R="#R*#0", U="#I=#0"} ) end,
    _([["Trade Lanes are the safest bet to travel around the universe. They have many patrols to keep you safe from pirates."]]),
-}
-
---[[
-Jump point messages.
-For giving the location of a jump point in the current system to the player
-for free. All messages must contain '{jmp}', this is the name of the target
-system. ALL NPCs have a chance to say one of these lines instead of a lore
-message. So, make sure the tips are always faction neutral.
---]]
-npc.msg_jmp = {
-   _([["Hi there, traveler. Is your system map up to date? Just in case you didn't know already, let me give you the location of the jump from here to {jmp}. I hope that helps."]]),
-   _([["Quite a lot of people who come in here complain that they don't know how to get to {jmp}. I travel there often, so I know exactly where the jump point is. Here, let me show you."]]),
-   _([["So you're still getting to know about this area, huh? Tell you what, I'll give you the coordinates of the jump to {jmp}. Check your map next time you take off!"]]),
-   _([["True fact, there's a direct jump from here to {jmp}. Want to know where it is? It'll cost you! Ha ha, just kidding. Here you go, I've added it to your map."]]),
-   _([["There's a system just one jump away by the name of {jmp}. I can tell you where the jump point is. There, I've updated your map. Don't mention it."]]),
-}
-
---[[
-Conditional messages.
---]]
-npc.msg_cond = {
-   -- Mission Hints
-   {npc.test_misnHint("Shadowrun"), _([["Apparently there's a woman who regularly turns up on planets in and around the Klantar system. I wonder what she's looking for?"]])},
-   {npc.test_misnHint("Hitman"), _([["There are often shady characters hanging out in the Alteris system. I'd stay away from there if I were you, someone might offer you a dirty kind of job!"]])},
-   -- Event hints
-   {npc.test_evtHint("FLF/DV Derelicts"), _([["The FLF and the Dvaered sometimes clash in Surano. If you go there, you might find something of interest… Or not."]])},
-   -- Mission Completion
-   {npc.test_misnDone("Nebula Satellite"), _([["Heard some reckless scientists got someone to put a satellite inside the nebula for them. I thought everyone with half a brain knew to stay out of there, but oh well."]])},
-   {npc.test_misnDone("Shadow Vigil"), _([["Did you hear? There was some big incident during a diplomatic meeting between the Empire and the Dvaered. Nobody knows what exactly happened, but both diplomats died. Now both sides are accusing the other of foul play. Could get ugly."]])},
-   {npc.test_misnDone("Baron"), _([["Some thieves broke into a museum on Varia and stole a holopainting! Most of the thieves were caught, but the one who carried the holopainting offworld is still at large. No leads. Damn criminals…"]])},
-   {npc.test_misnDone("Destroy the FLF base!"), _([["The Dvaered scored a major victory against the FLF recently. They went into Sigur and blew the hidden base there to bits! I bet that was a serious setback for the FLF."]])},
-   -- Event Completion
-   {npc.test_evtDone("Animal trouble"), _([["What? You had rodents sabotage your ship? Man, you're lucky to be alive. If it had hit the wrong power line…"]])},
-   {npc.test_evtDone("Naev Needs You!"), _([["What do you mean, the world ended and then the creator of the universe came and fixed it? What kind of illegal substance are you on?"]])},
 }
 
 function npc.cache ()

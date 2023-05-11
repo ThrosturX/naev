@@ -674,7 +674,7 @@ static int linoptL_solve( lua_State *L )
          return 2;
       }
       /* Check for optimality of discrete problem. */
-      ret = glp_get_status(lp->prob);
+      ret = glp_mip_status(lp->prob);
       if ((ret != GLP_OPT) && (ret != GLP_FEAS)) {
          lua_pushnil(L);
          lua_pushstring(L, linopt_status(ret));
@@ -738,7 +738,7 @@ static int linoptL_readProblem( lua_State *L )
    LuaLinOpt_t lp;
    if (dirname == NULL)
       NLUA_ERROR( L, _("Failed to read LP problem \"%s\"!"), fname );
-   asprintf( &fpath, "%s/%s", dirname, fname );
+   SDL_asprintf( &fpath, "%s/%s", dirname, fname );
    lp.prob = glp_create_prob();
    ret = glpk_format ? glp_read_prob( lp.prob, 0, fpath ) : glp_read_mps(  lp.prob, GLP_MPS_FILE, NULL, fpath );
    free( fpath );
@@ -770,8 +770,9 @@ static int linoptL_writeProblem( lua_State *L )
    const char *dirname = PHYSFS_getWriteDir();
    char *fpath;
    int ret;
-   asprintf( &fpath, "%s/%s", dirname, fpath );
-   ret = glpk_format ? glp_write_prob( lp->prob, 0, fpath ) : glp_write_mps(  lp->prob, GLP_MPS_FILE, NULL, fname );
+   SDL_asprintf( &fpath, "%s/%s", dirname, fname );
+   ret = glpk_format ? glp_write_prob( lp->prob, 0, fpath ) : glp_write_mps(  lp->prob, GLP_MPS_FILE, NULL, fpath );
+   free( fpath );
    lua_pushboolean( L, ret==0 );
    return 1;
 }

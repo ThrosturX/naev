@@ -37,7 +37,6 @@ local vntk     = require 'vntk'
 local dv       = require "common.dvaered"
 local pir      = require "common.pirate"
 
--- luacheck: globals enter land escape spawnKoala koalaHailed koalaEscaped koalaBoard spreadCommando gather spawnShark makeSilentDeathAnnoying sharkEscaped sharkAttacked sharkKilled
 
 -- Define the cargo commodity
 local cargo_misn
@@ -173,7 +172,7 @@ function accept()
    -- Mission details
    mem.credits = 100e3
    misn.setTitle(_("Dvaered Negotiation 1"))
-   misn.setReward( fmt.credits( mem.credits ) )
+   misn.setReward( mem.credits )
    misn.setDesc( fmt.f(_("A Dvaered Warlord needs you to kill a Goddard shareholder. Strangely enough, this operation will be mostly legal.")))
    mem.misn_marker = misn.markerAdd( mem.enginpnt )
    mem.misn_state = 0

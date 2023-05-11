@@ -15,7 +15,6 @@ function __hoge( data ) -- internal in name only, or forward-declared local func
 
 -- Remark: the (sub)taskdata is passed as the (sub)task function argument
 --]]
-
 local atk = require "ai.core.attack.util"
 local fmt = require "format"
 local scans = require "ai.core.misc.scans"
@@ -214,13 +213,13 @@ function __moveto_generic( target, dir )
    local dist  = ai.dist( target )
    local bdist = 50
 
-   -- Need to get closer
-   if dir < math.rad(10) and dist > bdist then
-      ai.accel()
-
    -- Need to start braking
-   elseif dist < bdist then
+   if dist < bdist then
       ai.poptask()
+
+   -- Need to get closer
+   elseif dir < math.rad(10) and dist > bdist then
+      ai.accel()
    end
 end
 
@@ -238,6 +237,9 @@ function follow( target )
    local dir   = ai.face(target)
    local dist  = ai.dist(target)
 
+   -- Stealth like whoever is being followed
+   ai.stealth( target:flags("stealth") )
+
    -- Must approach
    if dir < math.rad(10) and dist > 300 then
       ai.accel()
@@ -251,6 +253,9 @@ function follow_accurate( target )
       ai.poptask()
       return
    end
+
+   -- Stealth like whoever is being followed
+   ai.stealth( target:flags("stealth") )
 
    local goal = ai.follow_accurate(target, mem.radius,
          mem.angle, mem.Kp, mem.Kd)
@@ -352,7 +357,7 @@ end
 -- luacheck: globals _hyp_approach_shoot (AI Task functions passed by name)
 function _hyp_approach_shoot( target )
    -- Shoot and approach
-   local enemy = ai.getenemy()
+   local enemy = atk.preferred_enemy()
    __shoot_turret( enemy )
    __hyp_approach( target )
 end
@@ -364,7 +369,7 @@ end
 
 -- luacheck: globals _landgo_shoot (AI Task functions passed by name)
 function _landgo_shoot ( planet )
-   local enemy = ai.getenemy()
+   local enemy = atk.preferred_enemy()
    __shoot_turret( enemy )
    __landgo( planet )
 end
@@ -399,7 +404,7 @@ function __choose_land_target ( target )
    return target
 end
 
-function land ( target )
+function land( target )
    local planet = __choose_land_target ( target )
    ai.pushsubtask( "_landgo", planet )
 end
@@ -446,11 +451,25 @@ function _landland ( planet )
    end
 end
 
-
 --[[
 -- Attempts to run away from the target.
 --]]
 function runaway( target )
+   if mem.mothership and mem.mothership:exists() then
+      local goal = ai.follow_accurate( mem.mothership, 0, 0, mem.Kp, mem.Kd )
+      local dir  = ai.face( goal )
+      local dist = ai.dist( goal )
+
+      if dist > 300 then
+         if dir < math.rad(10) then
+            ai.accel()
+         end
+      else -- Time to dock
+         ai.dock( mem.mothership )
+      end
+      return
+   end
+
    -- Target must exist
    if not target or not target:exists() then
       ai.poptask()

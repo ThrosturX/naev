@@ -65,14 +65,24 @@ local msg_lore = {
    _([["Have you ever seen an Executor up close? I heard they use special technology to create a shield aura around Imperial ships!"]]),
    _([["I really want to meet the Emperor's Iguana. It's supposed to be 3 times bigger than a human and breathe fire!"]]),
    _([["I'm fed up with all the paper work. I want to move to someplace more simple. Maybe a Dvaered planet would be good."]]),
+   _([["I don't understand how the Soromid can live outside of the Empire. They should subjugate as a Great House or be eliminated!"]]),
+   _([["House Za'lek used to be closed to the outside world. I wonder what made them change their mind?"]]),
+   _([["The Dvaered are very boisterous and violent, however, their loyalty to the Empire is second to none!"]]),
+   _([["Why can't the Empire do more against pirates? We have the best armada in the galaxy!"]]),
+   _([["They tell us that if we work hard enough, we too can become nobles in the Imperial Court, but nobody I know has made it in!"]]),
+   _([["In the Empire, the teach us to do paperwork as soon as we learn to read! Since it's so important, I think they should teach it even sooner!"]]),
+}
+
+local msg_tip = {
    _([["Lasers are very fast and have long range. Other Houses wish they had such good weapon technology!"]]),
    _([["Doing shipping for the Empire pays much better than other cargo missions. It is also a good way to curry favour with the Empire!"]]),
+   _([["If you get in a pickle wih a pirate and no Empire ship is around to save you, you can always bribe them to go away. No paperwork needed!"]]),
 }
 
 local msg_cond = {
    { npc.test_misnHint("Empire Recruitment"), _([["Have you thought about doing shipping for the Empire? It's great work! You just need to find a recruiter to teach you the ropes."]])},
    { npc.test_misnHint("Empire Shipping 2"), _([["I hear you can get a Heavy Weapons License if you help out the Empire doing special shipping missions."]])},
-   { npc.test_misnHint("Collective Espionage 1"), _([["I've heard that there seems to be lots of combat near Fortitude. You might even be able to help if you make it to Omega Station."]])},
+   { npc.test_misnHint("Collective Espionage 1"), _([["I've heard that there seems to be lots of combat near Fortitude. You might even be able to help if you make it to Omega Enclave."]])},
    { npc.test_misnHint("Operation Cold Metal"), _([["I was getting rid of some documents the other day and found some old document about a project to create a fully autonomous self-replicating armada of robot ships. I wonder what happened with that?"]])},
    { function () return (player.chapter()=="0") end, _([["I hear the Empire is looking for rare minerals in Gamma Polaris. What could they be building?"]])},
    { function () return (player.chapter()~="0") end, _([["Did you see the incredible hypergate at Gamma Polaris? The Empire is still unrivaled by the Great Houses!"]])},
@@ -96,8 +106,15 @@ return function ()
    local presence = scur:presences()["Empire"] or 0
    local tags = cur:tags()
 
-   -- Need presence in the system
-   if presence <= 0 then
+   local w = 0
+   if cur:faction() == faction.get("Empire") then
+      w = 1
+   elseif presence>0 then
+      w = 0.2 -- Fewer NPC
+   end
+
+   -- Need positive weight
+   if w <= 0 then
       return nil
    end
 
@@ -108,27 +125,13 @@ return function ()
    end
 
    -- Create a list of conditional messages
-   msg_combined = {}
-   for k,msg in ipairs( msg_cond ) do
-      if msg[1]() then
-         table.insert( msg_combined, msg[2] )
-      end
-   end
+   msg_combined = npc.combine_cond( msg_cond )
 
    -- Add tag-appropriate descriptions
-   local descriptions = tcopy( desc_list["generic"] )
-   for t,v in pairs(tags) do
-      local dl = desc_list[t]
-      if dl then
-         for k,d in ipairs(dl) do
-            table.insert( descriptions, d )
-         end
-      end
-   end
+   local descriptions = npc.combine_desc( desc_list, tags )
 
    local function gen_npc()
-      -- Append the faction to the civilian name, unless there is no faction.
-      local name = _("Empire Civilian")
+      local name = _("Empire Citizen")
       local desc = descriptions[ rnd.rnd(1,#descriptions) ]
       local prt  = portrait.get( "Empire" )
       local image = portrait.getFullPath( prt )
@@ -137,12 +140,16 @@ return function ()
       if r <= 0.45 then
          msg = getMessageLore()
       elseif r <= 0.7 then
-         msg = getMessage( npc.msg_tip )
+         if rnd.rnd() < 0.5 then
+            msg = getMessage( msg_tip )
+         else
+            msg = getMessage( npc.msg_tip )
+         end
       else
          msg = getMessage( msg_combined )
       end
       return { name=name, desc=desc, portrait=prt, image=image, msg=msg }
    end
 
-   return { create=gen_npc }
+   return { create=gen_npc, w=w }
 end

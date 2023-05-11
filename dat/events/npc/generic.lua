@@ -1,16 +1,33 @@
 local fmt = require "format"
-local portrait = require "portrait"
 local npc = require "common.npc"
+local vni = require "vnimage"
 
 -- Chance of a jump point message showing up. As this gradually goes
 -- down, it is replaced by lore messages. See spawnNPC function.
 local jm_chance_min = 0
 local jm_chance_max = 0.25
 -- State. Nothing persists.
-local msg_combined, seltargets
+local msg_combined
 
-local msg_lore = npc.msg_lore
-msg_lore["generic"] = {
+local desc_list = {
+   _("This person seems to be here to relax."),
+   _("There is a civilian sitting on one of the tables."),
+   _("There is a civilian sitting there, looking somewhere else."),
+   _("A worker sits at one of the tables, wearing a name tag saying \"Go away\"."),
+   _("A civilian sits at the bar, seemingly serious about the cocktails on offer."),
+   _("A civilian wearing a shirt saying: \"Ask me about Jaegnhild\""),
+   _("There is a civilian sitting in the corner."),
+   _("A civilian feverishly concentrating on a fluorescing drink."),
+   _("A civilian drinking alone."),
+   _("This person seems friendly enough."),
+   _("A civilian sitting at the bar."),
+   _("This person is idly browsing a news terminal."),
+   _("A worker sips a cold drink after a hard shift."),
+   _("A worker slouched against the bar, nursing a drink."),
+   _("This worker seems bored with everything but their drink."),
+}
+
+local msg_lore = {
    _([["I heard the nebula is haunted! My uncle Bobby told me he saw one of the ghost ships himself over in Arandon!"]]),
    _([["I don't believe in those nebula ghost stories. The people who talk about it are just trying to scare you."]]),
    _([["I heard the Soromid lost their homeworld Sorom in the Incident. Its corpse can still be found in Basel."]]),
@@ -25,108 +42,42 @@ msg_lore["generic"] = {
    _([["Sometimes I look at the stars and wonder… are we the only sentient species in the universe?"]]),
    _([["Hey, you ever wonder why we're here?" You respond that it's one of the great mysteries of the universe. Why are we here? Are we the product of some cosmic coincidence or is there some great cosmic plan for us? You don't know, but it sometimes keeps you up at night. As you say this, the citizen stares at you incredulously. "What?? No, I mean why are we in here, in this bar?"]]),
    _([["Life is so boring here. I would love to go gamble with all the famous people at Minerva Station."]]),
+   _([["I used to dream of being a racer at Melendez Station, but my reflexes are just not up to the job."]]),
 }
 
+local msg_cond = {
+   -- Chapter stuff
+   { function () return (player.chapter()=="0") end, _([["There's talk about all these megastructures built around the universe. I call bollocks, there's no way people could work together to build something so impressive. Everyone is always fighting!"]]) },
+   { function () return (player.chapter()=="1") end, _([["Have you seen the new hypergates? Maybe this is the start of all the Great houses putting their differences aside and a new future for a unified humanity!"]]) }, -- Narrator: it was not
+   -- Mission Hints
+   {npc.test_misnHint("Shadowrun"), _([["Apparently there's a woman who regularly turns up on planets in and around the Klantar system. I wonder what she's looking for?"]])},
+   {npc.test_misnHint("Hitman"), _([["There are often shady characters hanging out in the Alteris system. I'd stay away from there if I were you, someone might offer you a dirty kind of job!"]])},
+   -- Event hints
+   {npc.test_evtHint("FLF/DV Derelicts"), _([["The FLF and the Dvaered sometimes clash in Surano. If you go there, you might find something of interest… Or not."]])},
+   {npc.test_evtHint("Introducing Taiomi", function () return (player.chapter()~="0") end ), _([["I've heard that there are ghosts to the north of Dune. They seem to be around asteroid fields. As if such a thing could exist! Probably just a brave miner in a Llama!"]])},
+   -- Mission Completion
+   {npc.test_misnDone("Nebula Satellite"), _([["Heard some reckless scientists got someone to put a satellite inside the nebula for them. I thought everyone with half a brain knew to stay out of there, but oh well."]])},
+   {npc.test_misnDone("Shadow Vigil"), _([["Did you hear? There was some big incident during a diplomatic meeting between the Empire and the Dvaered. Nobody knows what exactly happened, but both diplomats died. Now both sides are accusing the other of foul play. Could get ugly."]])},
+   {npc.test_misnDone("Baron"), _([["Some thieves broke into a museum on Varia and stole a holopainting! Most of the thieves were caught, but the one who carried the holopainting offworld is still at large. No leads. Damn criminals…"]])},
+   {npc.test_misnDone("Destroy the FLF base!"), _([["The Dvaered scored a major victory against the FLF recently. They went into Sigur and blew the hidden base there to bits! I bet that was a serious setback for the FLF."]])},
+   {npc.test_misnDone("Taiomi 10"), _([["There have been an awful lot of patrols going missing near Bastion. Could this be work of the ghosts people talk about?"]])},
+   -- Event Completion
+   {npc.test_evtDone("Animal trouble"), _([["What? You had rodents sabotage your ship? Man, you're lucky to be alive. If it had hit the wrong power line…"]])},
+   {npc.test_evtDone("Naev Needs You!"), _([["What do you mean, the world ended and then the creator of the universe came and fixed it? What kind of illegal substance are you on?"]])},
+}
+
+local msg_jump = {
+   _([["Hi there, traveler. Is your system map up to date? Just in case you didn't know already, let me give you the location of the jump from here to {jmp}. I hope that helps."]]),
+   _([["Quite a lot of people who come in here complain that they don't know how to get to {jmp}. I travel there often, so I know exactly where the jump point is. Here, let me show you."]]),
+   _([["So you're still getting to know about this area, huh? Tell you what, I'll give you the coordinates of the jump to {jmp}. Check your map next time you take off!"]]),
+   _([["True fact, there's a direct jump from here to {jmp}. Want to know where it is? It'll cost you! Ha ha, just kidding. Here you go, I've added it to your map."]]),
+   _([["There's a system just one jump away by the name of {jmp}. I can tell you where the jump point is. There, I've updated your map. Don't mention it."]]),
+}
+
+--[=[
 msg_lore["Independent"] = {
    _([["We're not part of any of the galactic superpowers. We can take care of ourselves!"]]),
    _([["Sometimes I worry that our lack of a standing military leaves us vulnerable to attack. I hope nobody will get any ideas about conquering us!"]]),
-}
-
-msg_lore["Dvaered"] = {
-   _([["Our Warlord is currently fighting for control over another planet. We all support him unconditionally, of course! Of course…"]]),
-   _([["My great-great-great-grandfather fought in the Dvaered Revolts! We still have the holovids he made. I'm proud to be a Dvaered!"]]),
-   _([["I've got lots of civilian commendations! It's important to have commendations if you're a Dvaered."]]),
-   _([["You better not mess with House Dvaered. Our military is the largest and strongest in the galaxy. Nobody can stand up to us!"]]),
-   _([["House Dvaered? House? The Empire is weak and useless, we don't need them anymore! I say we declare ourselves an independent faction today. What are they going to do, subjugate us? We all know how well that went last time! Ha!"]]),
-   _([["I'm thinking about joining the military. Every time I see or hear news about those rotten FLF bastards, it makes my blood boil! They should all be pounded into space dust!"]]),
-   _([["FLF terrorists? I'm not too worried about them. You'll see, High Command will have smoked them out of their den soon enough, and then the Frontier will be ours."]]),
-   _([["Did you know that House Dvaered was named after a hero of the revolt? At least that's what my grandparents told me."]]),
-}
-
-msg_lore["Sirius"] = {
-   _([["Greetings, traveler. May Sirichana's wisdom guide you as it guides me."]]),
-   _([["I once met one of the Touched in person. Well, it wasn't really a meeting, our eyes simply met… But that instant alone was awe-inspiring."]]),
-   _([["They say Sirichana lives and dies like any other man, but each new Sirichana is the same as the last. How is that possible?"]]),
-   _([["My cousin was called to Mutris a cycle ago… He must be in Crater City by now. And one day, he will become one of the Touched!"]]),
-   _([["Some people say Sirius society is unfair because our echelons are determined by birth. But even though we are different, we are all followers of Sirichana. Spiritually, we are equal."]]),
-   _([["House Sirius is officially part of the Empire, but everyone knows that's only true on paper. The Emperor has nothing to say in these systems. We follow Sirichana, and no-one else."]]),
-   _([["You can easily tell the different echelons apart. Every Sirian citizen and soldier wears clothing appropriate to his or her echelon."]]),
-   _([["I hope to meet one of the Touched one day!"]]),
-}
-
-msg_lore["Soromid"] = {
-   _("Hello. Can I interest you in one of our galaxy famous cosmetic gene treatments? You look like you could use them…"),
-   _([["Can you believe it? I was going to visit Sorom to find my roots, and then boom! It got burnt to a crisp! Even now, cycles later, I still can't believe it."]]),
-   _([["Yes, it's true, our military ships are alive. Us normal folk don't get to own bioships though, we have to make do with synthetic constructs just like everyone else."]]),
-   _([["Everyone knows that we Soromid altered ourselves to survive the deadly conditions on Sorom during the Great Quarantine. What you don't hear so often is that billions of us died from the therapy itself. We paid a high price for survival."]]),
-   _([["Our cosmetic gene treatments are even safer now for non-Soromids, with a rate of survival of 99.4%!"]]),
-   _([["We have been rebuilding and enhancing our bodies for so long, I say we've become a new species, one above human."]]),
-}
-
-msg_lore["Thurion"] = {
-   _([["Did you know that even the slightest bit of brain damage can lead to death during the upload process? That's why we're very careful to not allow our brains to be damaged, even a little."]]),
-   _([["My father unfortunately hit his head when he was young, so he couldn't be safely uploaded. It's okay, though; he had a long and fulfilling life, for a non-uploaded human, that is."]]),
-   _([["One great thing once you're uploaded is that you can choose to forget things you don't want to remember. My great-grandfather had a movie spoiled for him before he could watch it, so once he got uploaded, he deleted that memory and watched it with a fresh perspective. Cool, huh?"]]),
-   _([["The best part of our lives is after we're uploaded, but that doesn't mean we lead boring lives before then. We have quite easy and satisfying biological lives before uploading."]]),
-   _([["Being uploaded allows you to live forever, but that doesn't mean you're forced to. Any uploaded Thurion can choose to end their own life if they want, though few have chosen to do so."]]),
-   _([["Uploading is a choice in our society. No one is forced to do it. It's just that, well, what kind of person would turn down the chance to live a second life on the network?"]]),
-   _([["We were lucky to not get touched by the Incident. In fact, we kind of benefited from it. The nebula that resulted gave us a great cover and sealed off the Empire from us. It also got rid of those dangerous Proterons."]]),
-   _([["We don't desire galactic dominance. That being said, we do want to spread our way of life to the rest of the galaxy, so that everyone can experience the joy of being uploaded."]]),
-   _([["I think you're from the outside, aren't you? That's awesome! I've never met a foreigner before. What's it like outside the nebula?"]]),
-   _([["We actually make occasional trips outside of the nebula, though only rarely, and we always make sure to not get discovered by the Empire."]]),
-   _([["The Soromid have a rough history. Have you read up on it? First the Empire confined them to a deadly planet and doomed them to extinction. Then, when they overcame those odds, the Incident blew up their homeworld. The fact that they're still thriving now despite that is phenomenal, I must say."]]),
-}
-
-msg_lore["Proteron"] = {
-   _([["Our system of government is clearly superior to all others. Nothing could be more obvious."]]),
-   _([["The Incident really set back our plan for galactic dominance, but that was only temporary."]]),
-   _([["We don't have time for fun and games. The whole reason we're so great is because we're more productive than any other society."]]),
-   _([["We are superior, so of course we deserve control over the galaxy. It's our destiny."]]),
-   _([["The Empire is weak, obsolete. That is why we must replace them."]]),
-   _([["Slaves? Of course we're not slaves. Slaves are beaten and starved. We are in top shape so we can serve our country better."]]),
-   _([["I can't believe the Empire continues to allow families. So primitive. Obviously, all this does is make them less productive."]]),
-   _([["The exact cause of the Incident is a tightly-kept secret, but the government says it was caused by the Empire's inferiority. I would expect nothing less."]]),
-   _([["I came across some heathen a few months back who claimed, get this, that we Proterons were the cause of the Incident! What slanderous nonsense. Being the perfect society we are, of course we would never cause such a massive catastrophe."]]),
-}
-
-msg_lore["Frontier"] = {
-   _([["We value our autonomy. We don't want to be ruled by those Dvaered Warlords! Can't they just shoot at each other instead of threatening us? If it wasn't for the Liberation Front…"]]),
-   _([["Have you studied your galactic history? The Frontier worlds were the first to be colonized by humans. That makes our worlds the oldest human settlements in the galaxy, now that Earth is gone."]]),
-   _([["We have the Dvaered encroaching on our territory on one side, and the Sirius zealots on the other. Sometimes I worry that in a few decacycles, the Frontier will no longer exist."]]),
-   _([["Have you visited the Frontier Museum? They've got a scale model of a First Growth colony ship on display in one of the big rooms. Even scaled down like that, it's massive! Imagine how overwhelming the real ones must have been."]]),
-   _([["There are twelve true Frontier worlds, because twelve colony ships successfully completed their journey in the First Growth. But did you know that there were twenty colony ships to begin with? Eight of them never made it. Some are said to have mysteriously disappeared. I wonder what happened to them?"]]),
-   _([["We don't have much here in the Frontier, other than our long history leading directly back to Earth. But I don't mind. I'm happy living here, and I wouldn't want to move anywhere else."]]),
-   _([["You know the Frontier Liberation Front? They're the guerilla movement that fights for the Frontier. Not to be confused with the Liberation Front of the Frontier, the Frontier Front for Liberation, or the Liberal Frontier's Front!"]]),
-}
-
-msg_lore["FLF"] = {
-   _([["I can't stand Dvaereds. I just want to wipe them all off the map. Don't you?"]]),
-   _([["One of these days, we will completely rid the Frontier of Dvaered oppressors. Mark my words!"]]),
-   _([["Have you ever wondered about our chances of actually winning over the Dvaereds? Sometimes I worry a little."]]),
-   _([["I was in charge of a bombing run recently. The mission was a success, but I lost a lot of comrades. Oh well… this is the sacrifice we must make to resist the oppressors."]]),
-   _([["What after we beat the Dvaereds, you say? Well, our work is never truly done until the Frontier is completely safe from oppression. Even if the Dvaered threat is ended, we'll still have those Sirius freaks to worry about. I don't think our job will ever end in our lifetimes."]]),
-   _([["Yeah, it's true, lots of Frontier officials fund our operations. If they didn't, we'd have a really hard time landing on Frontier planets, what with the kinds of operations we perform against the Dvaereds."]]),
-   _([["Yeah, some civilians die because of our efforts, but that's just a sacrifice we have to make. It's for the greater good."]]),
-   _([["No, we're not terrorists. We're soldiers. True terrorists kill and destroy without purpose. Our operations do have a purpose: to drive out the Dvaered oppressors from the Frontier."]]),
-   _([["Riddle me this: how can we be terrorists if the Dvaereds started it by encroaching on Frontier territory? It's the most ridiculous thing I ever heard."]]),
-   _([["Well, no, the Dvaereds never actually attacked Frontier ships, but that's not the point. They have their ships in Frontier territory. What other reason could they possibly have them there for if not to set up an invasion?"]]),
-}
-
-msg_lore["Pirate"] = {
-   _([["Hi mate. Money or your life! Heh heh, just messing with you."]]),
-   _([["Hey, look at these new scars I got!"]]),
-   _([["Have you heard of the Pirates' Code? They're more guidelines than rules…"]]),
-   _([["My gran once said to me, 'Never trust a pirate.' Well, she was right! I got a pretty credit chip outta her wallet last time I saw her, and I'd do it again."]]),
-   _([["I don't understand why some pirates talk like 16th-century Earth pirates even though that planet is literally dead."]]),
-   _([["I may be a pirate who blows up ships and steals for a living, but that inner nebula still kind of freaks me out."]]),
-   _([["Damn Empire stopped my heist a few decaperiods ago. Just wait'll they see me again…"]]),
-   _([["There's a pirate clanworld I really wanted to get to, but they wouldn't let me in because I'm a 'small-time pirate'! Sometimes I think I'll never make it in this line of work…"]]),
-   _([["Just caught an old mate ferrying tourists for credits. Nearly puked out my grog! Your reputation won't survive for long working for our victims."]]),
-   _([["I was around before Haven was destroyed, you know! Funny times. All the pirates were panicking and the Empire was cheering thinking that we were done for. Ha! As if! It barely even made a difference. We just relocated to New Haven and resumed business as usual."]]),
-   _([["Y'know, I got into this business by accident to tell the truth. But what can you do? I could get a fake ID and pretend to be someone else but I'd get caught eventually and I'd lose my fame as a pirate."]]),
-   _([["One of my favourite things to do is buy a fake ID and then deliver as much contraband as I can before I get caught. It's great fun, and finding out that my identity's been discovered gives me a rush!"]]),
-   _([["Back when I started out in this business all you could do was go around delivering packages for other people. Becoming a pirate was real hard back then, but I got so bored I spent several decaperiods doing it. Nowadays things are way more exciting for normies, but I don't regret my choice one bit!"]]),
-   _([["Flying a real big ship is impressive, but it's still no pirate ship. I mean, I respect ya more if you're flying a Goddard than if you're flying a civilian Lancelot, but the best pirates fly the good old Pirate Kestrel!"]]),
 }
 
 msg_lore["Trader"] = {
@@ -135,41 +86,30 @@ msg_lore["Trader"] = {
    _([["If you don't watch the markets then you'll be hopping between planets in a jury-rigged ship in no time."]]),
    _([["Them blimming pirates, stopping honest folk from making an honest living - it's not like we're exploiting the needy!"]]),
 }
+--]=]
 
-
--- Returns a lore message for the given faction.
-local function getMessageLore( fct )
-   local fctmsg = msg_lore[fct]
-   if fctmsg == nil or #fctmsg == 0 then
-      fctmsg = msg_lore["generic"]
-   end
-   return fctmsg[ rnd.rnd(1, #fctmsg) ]
+-- Get a lore message
+local function getMessageLore ()
+   return msg_lore[ rnd.rnd(1, #msg_lore) ]
 end
 
 -- Returns a jump point message and updates jump point known status accordingly. If all jumps are known by the player, defaults to a lore message.
-local function getMessageJump( fct )
-   -- Collect a table of jump points in the system the player does NOT know.
-   local mytargets = {}
-   seltargets = seltargets or {} -- We need to keep track of jump points NPCs will tell the player about so there are no duplicates.
-   for _, j in ipairs(system.cur():jumps(true)) do
-      if not j:known() and not j:hidden() and not seltargets[j] then
-         table.insert(mytargets, j)
-      end
-   end
-
+local jumptargets = {}
+local function getMessageJump ()
    -- The player already knows all jumps in this system or no messages
-   if #mytargets == 0 or #npc.msg_jmp==0 then
-      return getMessageLore( fct )
+   if #jumptargets == 0 or #msg_jump==0 then
+      return getMessageLore()
    end
 
-   local retmsg =  npc.msg_jmp[rnd.rnd(1, #npc.msg_jmp)]
-   local sel = rnd.rnd(1, #mytargets)
+   local retmsg =  msg_jump[rnd.rnd(1, #msg_jump)]
+   local sel = rnd.rnd(1, #jumptargets)
+   local tgt = jumptargets[sel]
    local myfunc = function( npcdata )
       if npcdata.talked then
          return
       end
-      mytargets[sel]:setKnown(true)
-      mytargets[sel]:dest():setKnown(true, false)
+      tgt:setKnown(true)
+      tgt:dest():setKnown(true, false)
 
       -- Reduce jump message chance
       local jm_chance = var.peek("npc_jm_chance") or jm_chance_max
@@ -177,47 +117,27 @@ local function getMessageJump( fct )
       npcdata.talked = true
    end
 
-   -- Don't need to remove messages from tables here, but add whatever jump point we selected to the "selected" table.
-   seltargets[mytargets[sel]] = true
-   return fmt.f( retmsg, {jmp=mytargets[sel]:dest()} ), myfunc
+   -- Remove target from list
+   table.remove( jumptargets, sel )
+   return fmt.f( retmsg, {jmp=tgt:dest()} ), myfunc
 end
 
-local function getMessage( lst, fct )
+local function getMessage( lst )
    if #lst == 0 then
-      return getMessageLore( fct )
+      return getMessageLore()
    end
    return lst[ rnd.rnd(1, #lst) ]
 end
 
--- Factions which will NOT get generic texts if possible.  Factions
--- listed here not spawn generic civilian NPCs or get aftercare texts.
--- Meant for factions which are either criminal (FLF, Pirate) or unaware
--- of the main universe (Thurion, Proteron).
-local nongeneric_factions = {
-   "Pirate",
-   "Marauder",
-   "Wild Ones",
-   "Raven Clan",
-   "Dreamer Clan",
-   "Black Lotus",
-   "FLF",
-   "Thurion",
-   "Proteron"
-}
-
--- List to treat special factions differently
-local override_list = {
-   -- Treat pirate clans the same (at least for now)
-   ["Wild Ones"]     = "Pirate",
-   ["Raven Clan"]    = "Pirate",
-   ["Dreamer Clan"]  = "Pirate",
-   ["Black Lotus"]   = "Pirate",
-   ["Marauder"]      = "Pirate",
-}
-
 return function ()
    local cur, scur = spob.cur()
    local presence = scur:presences()["Independent"] or 0
+   local fct = cur:faction()
+
+   -- Need a generic faction
+   if not fct or not fct:tags().generic then
+      return nil
+   end
 
    -- Need independent presence in the system
    if presence <= 0 then
@@ -230,69 +150,36 @@ return function ()
    end
 
    -- Create a list of conditional messages
-   msg_combined = {}
-   for k,msg in ipairs( npc.msg_cond ) do
-      if msg[1]() then
-         table.insert( msg_combined, msg[2] )
+   msg_combined = npc.combine_cond( msg_cond )
+
+   -- Collect a table of jump points in the system the player does NOT know.
+   jumptargets = {}
+   for _, j in ipairs(system.cur():jumps(true)) do
+      if not j:known() and not j:hidden() then
+         table.insert(jumptargets, j)
       end
    end
 
    local function gen_npc()
-      -- Choose faction, overriding if necessary
-      local f = cur:faction()
-      if not f then return nil end
-      local of = override_list[f:nameRaw()]
-      if of then f = faction.get(of) end
-
-      local nongeneric = false
-      local planfaction = (f ~= nil and f:nameRaw()) or nil
-      local fct = nil
-      local sel = rnd.rnd()
-      if planfaction ~= nil then
-         for i, j in ipairs(nongeneric_factions) do
-            if j == planfaction then
-               nongeneric = true
-               break
-            end
-         end
-
-         if nongeneric or sel >= 0.5 then
-            fct = planfaction
-         end
-      end
-      -- Some factions are handled differently now
-      if fct == "Empire" then fct = nil end
-      if fct == "Za'lek" then fct = nil end
-
       -- Append the faction to the civilian name, unless there is no faction.
-      local name
-      if not fct then
-         name = _("Civilian")
-      else
-         name = fmt.f( _("{fct} Civilian"), {fct=_(fct)} )
-      end
-      local desc = npc.desc_list[ rnd.rnd(1,#npc.desc_list) ]
-      local prt  = portrait.get( fct )
-      local image = portrait.getFullPath( prt )
+      local name = _("Civilian")
+      local desc = desc_list[ rnd.rnd(1,#desc_list) ]
+      local image, prt = vni.generic()
       local msg, func
       local r = rnd.rnd()
 
       if r < (var.peek("npc_jm_chance") or jm_chance_max) then
          -- Jump point message.
-         msg, func = getMessageJump( fct )
+         msg, func = getMessageJump()
       elseif r <= 0.55 then
          -- Lore message.
-         msg = getMessageLore( fct )
+         msg = getMessageLore()
       elseif r <= 0.8 then
          -- Gameplay tip message.
-         msg = getMessage( npc.msg_tip, fct )
+         msg = getMessage( npc.msg_tip )
       else
          -- Mission hint message.
-         if not nongeneric then
-            msg = getMessage( msg_combined, fct )
-         else
-            msg = getMessageLore( fct )
-         end
+         msg = getMessage( msg_combined )
       end
       return { name=name, desc=desc, portrait=prt, image=image, msg=msg, func=func }
    end

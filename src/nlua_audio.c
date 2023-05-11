@@ -83,6 +83,7 @@ static int audioL_getRolloff( lua_State *L );
 static int audioL_setEffect( lua_State *L );
 static int audioL_setGlobalEffect( lua_State *L );
 static int audioL_setGlobalAirAbsorption( lua_State *L );
+static int audioL_setGlobaDopplerFactor( lua_State *L );
 /* Deprecated stuff. */
 static int audioL_soundPlay( lua_State *L ); /* Obsolete API, to get rid of. */
 static const luaL_Reg audioL_methods[] = {
@@ -117,6 +118,7 @@ static const luaL_Reg audioL_methods[] = {
    { "setEffect", audioL_setEffect },
    { "setGlobalEffect", audioL_setGlobalEffect },
    { "setGlobalAirAbsorption", audioL_setGlobalAirAbsorption },
+   { "setGlobalDopplerFactor", audioL_setGlobaDopplerFactor },
    /* Deprecated. */
    { "soundPlay", audioL_soundPlay }, /* Old API */
    {0,0}
@@ -637,7 +639,7 @@ void audio_clone( LuaAudio_t *la, const LuaAudio_t *source )
    soundLock();
    audio_genSource( &la->source );
 
-   switch (la->type) {
+   switch (source->type) {
       case LUA_AUDIO_STATIC:
          /* Attach source buffer. */
          la->buf = source->buf;
@@ -654,13 +656,14 @@ void audio_clone( LuaAudio_t *la, const LuaAudio_t *source )
       case LUA_AUDIO_NULL:
          break;
    }
+   la->type = source->type;
 
    /* TODO this should probably set the same parameters as the original source
     * being cloned to be truly compatible with Love2D. */
    /* Defaults. */
    master = sound_getVolumeLog();
-   alSourcef( la->source, AL_GAIN, master );
-   la->volume = 1.;
+   alSourcef( la->source, AL_GAIN, master * source->volume );
+   la->volume = source->volume;
    /* See note in audioL_new */
    alSourcei( la->source, AL_SOURCE_RELATIVE, AL_TRUE );
    alSource3f( la->source, AL_POSITION, 0., 0., 0. );
@@ -864,13 +867,11 @@ static int audioL_seek( lua_State *L )
    LuaAudio_t *la = luaL_checkaudio(L,1);
    double offset = luaL_checknumber(L,2);
    const char *unit = luaL_optstring(L,3,"seconds");
-   int seconds;
+   int seconds = 1;
 
-   if (strcmp(unit,"seconds")==0)
-      seconds = 1;
-   else if (strcmp(unit,"samples")==0)
+   if (strcmp(unit,"samples")==0)
       seconds = 0;
-   else
+   else if (strcmp(unit,"seconds")!=0)
       NLUA_ERROR(L, _("Unknown seek source '%s'! Should be either 'seconds' or 'samples'!"), unit );
 
    if (sound_disabled)
@@ -917,13 +918,11 @@ static int audioL_tell( lua_State *L )
    const char *unit = luaL_optstring(L,2,"seconds");
    double offset = -1.;
    float aloffset;
-   int seconds;
+   int seconds = 1;
 
-   if (strcmp(unit,"seconds")==0)
-      seconds = 1;
-   else if (strcmp(unit,"samples")==0)
+   if (strcmp(unit,"samples")==0)
       seconds = 0;
-   else
+   else if (strcmp(unit,"seconds")!=0)
       NLUA_ERROR(L, _("Unknown seek source '%s'! Should be either 'seconds' or 'samples'!"), unit );
 
    if (sound_disabled) {
@@ -973,15 +972,13 @@ static int audioL_getDuration( lua_State *L )
    LuaAudio_t *la = luaL_checkaudio(L,1);
    const char *unit = luaL_optstring(L,2,"seconds");
    float duration = -1.;
-   int seconds;
+   int seconds = 1;
    ALint bytes, channels, bits, samples;
    ALuint buffer;
 
-   if (strcmp(unit,"seconds")==0)
-      seconds = 1;
-   else if (strcmp(unit,"samples")==0)
+   if (strcmp(unit,"samples")==0)
       seconds = 0;
-   else
+   else if (strcmp(unit,"seconds")!=0)
       NLUA_ERROR(L, _("Unknown duration source '%s'! Should be either 'seconds' or 'samples'!"), unit );
 
    if (sound_disabled) {
@@ -1716,6 +1713,26 @@ static int audioL_setGlobalAirAbsorption( lua_State *L )
    alSpeedOfSound( speed );
    if (absorption > 0.)
       sound_setAbsorption( absorption );
+   al_checkErr();
+   soundUnlock();
+   return 0;
+}
+
+/**
+ * @brief Sets the doppler effect factor.
+ *
+ * Defaults to 0.3 outside of the nebula and 1.0 in the nebula.
+ *
+ *    @luatparam number factor Factor to set doppler effect to. Must be positive.
+ * @luafunc setGlobalDopplerFactor
+ */
+static int audioL_setGlobaDopplerFactor( lua_State *L )
+{
+   if (sound_disabled)
+      return 0;
+
+   soundLock();
+   alDopplerFactor( luaL_checknumber(L,1) );
    al_checkErr();
    soundUnlock();
    return 0;

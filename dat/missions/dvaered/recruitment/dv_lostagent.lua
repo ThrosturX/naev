@@ -39,7 +39,6 @@ local vn       = require 'vn'
 local vntk     = require 'vntk'
 local dv       = require "common.dvaered"
 
--- luacheck: globals enter land loading escape scanned discussWithAg spawnSwan swanDisabled swanExploded swanBoarded assetBoardsSwan swanEscaped spawnSquad spawnDuchmol duchExploded duchEscaped duchAttacked message
 
 -- Define the cargo commodity
 local cargo_misn
@@ -56,7 +55,7 @@ local agentPort = "neutral/female1.webp"
 function create()
    mem.flfsys  = system.get("Theras")
    mem.flfoys  = system.get("Haleb") -- Origin of the target
-   mem.duchpnt, mem.duchsys  = spob.getS("Myuirr Station")
+   mem.duchpnt, mem.duchsys  = spob.getS("Fort Myuirr")
 
    if not misn.claim({mem.flfsys,mem.duchsys}) then misn.finish(false) end -- Claim
 
@@ -109,7 +108,7 @@ Oh, I almost forgot! There is one thing you are authorized to know: this cargo i
    -- Mission details
    mem.credits = 50e3
    misn.setTitle(_("Dvaered Delivery"))
-   misn.setReward( fmt.credits( mem.credits ) )
+   misn.setReward( mem.credits )
    misn.setDesc( fmt.f(_("You have to transfer a parcel to the Empire at {pnt} ({sys})"), {pnt=mem.spob1,sys=sys}))
    mem.misn_marker = misn.markerAdd( mem.spob1 )
    mem.misn_state = 0

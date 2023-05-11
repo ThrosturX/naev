@@ -22,6 +22,7 @@
 #include "ndata.h"
 #include "nfile.h"
 #include "nlua_cli.h"
+#include "nlua_audio.h"
 #include "nlua_commodity.h"
 #include "nlua_data.h"
 #include "nlua_diff.h"
@@ -229,12 +230,15 @@ int nlua_dobufenv( nlua_env env,
                    size_t sz,
                    const char *name )
 {
-   if (luaL_loadbuffer(naevL, buff, sz, name) != 0)
-      return -1;
+   int ret;
+   ret = luaL_loadbuffer(naevL, buff, sz, name);
+   if (ret != 0)
+      return ret;
    nlua_pushenv(naevL, env);
    lua_setfenv(naevL, -2);
-   if (nlua_pcall(env, 0, LUA_MULTRET) != 0)
-      return -1;
+   ret = nlua_pcall(env, 0, LUA_MULTRET);
+   if (ret != 0)
+      return ret;
 #if DEBUGGING
    lua_pushstring( naevL, name );
    nlua_setenv( naevL, env, "__name" );
@@ -777,6 +781,7 @@ int nlua_loadStandard( nlua_env env )
    r |= nlua_loadLinOpt(env);
    r |= nlua_loadSafelanes(env);
    r |= nlua_loadSpfx(env);
+   r |= nlua_loadAudio(env);
 
    return r;
 }

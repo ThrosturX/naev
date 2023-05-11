@@ -14,10 +14,10 @@
 -- Sudarshan S <ssoxygen@users.sf.net>
 local fleet = require "fleet"
 local fmt = require "format"
+local cinema = require "cinema"
 
 local restoreControl -- Forward-declared function
 local attackers, curr, follower, followers, hailHook, praiser, preacher, rep, target -- Event state, never saved.
--- luacheck: globals anotherdead badCleanup cleanup funStartsSoon hail jumpCleanup landCleanup pirateSpawn praise preacherSpeak reHail release theFunBegins violence (Hook functions passed by name)
 
 local althoughEnemy={
 _("{player}, although you are an enemy of House Sirius, I shall not attack unless provoked, for I abhor violence!"),
@@ -109,6 +109,11 @@ _("Someone killed the preacher!")
 
 --initialize the event
 function create()
+   -- Doesn't pilot.clear so inclusive claim
+   if not evt.claim( system.cur(), true ) then
+      evt.finish( false )
+   end
+
    curr = system.cur() --save the current system
 
    -- Start the fun when the player jumps
@@ -179,11 +184,11 @@ function theFunBegins()
    hook.jumpout("cleanup")
 
    camera.set(preacher)
-   player.cinematics(true,{gui=true, abort=presence[rnd.rnd(1,#presence)]})
+   cinema.on{ gui=true, abort=presence[rnd.rnd(1,#presence)] }
 
    --you're hooked till you hear him out!
-   pp:control()
    player.msg(urge[rnd.rnd(1,#urge)])
+   pp:face( preacher )
 
    --create a random band of converted pirate followers
    local followerShips = {"Pirate Kestrel", "Pirate Admonisher", "Pirate Shark", "Pirate Vendetta", "Pirate Rhino"} --the types of followers allowed
@@ -243,7 +248,7 @@ function theFunBegins()
    hook.timer(17.5, "release")
 
    --hook up timer for re-hailing player
-   hailHook=hook.date(time.create(0, 0, 1000), "reHail") --hail every 1000 STU till player answers
+   hailHook=hook.date(time.new(0, 0, 1000), "reHail") --hail every 1000 STU till player answers
 
    --when hailed, the preacher preaches to you
    hook.pilot(preacher, "hail", "hail")
@@ -374,18 +379,12 @@ function restoreControl()
 end
 
 local function release_player ()
-   local pp = player.pilot()
-   pp:setInvincible(false)
-   pp:control(false)
-   for k,v in ipairs(pp:followers()) do
-      v:setInvincible(false)
-   end
+   cinema.off()
+   camera.set()
 end
 
 --releases the player after the cutscene
 function release()
-   camera.set()
-   player.cinematics(false)
    release_player ()
    --if the attacks have already started, we shouldn't set a target yet
    if #attackers==0 then
@@ -404,9 +403,7 @@ end
 
 --everything is done
 function cleanup()
-   release_player()
-   camera.set( nil, true )
-   player.cinematics(false)
+   release_player ()
    evt.finish(true)
 end
 

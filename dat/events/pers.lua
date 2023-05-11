@@ -8,7 +8,6 @@
 --]]
 local lf = require "love.filesystem"
 
--- luacheck: globals enter timer pers_attacked pers_death (Hook funtions passed by name)
 
 -- Parse directory to add personas
 local pers_func_list = {}
@@ -83,7 +82,7 @@ function pers_attacked( _p, attacker, dmg, pt )
 end
 
 function pers_death( _p, attacker, pt )
-   if pt.dmgp > pt.dmgo or attacker:withPlayer() then
+   if pt.dmgp > pt.dmgo or (attacker and attacker:withPlayer()) then
       if pt.ondeath then
          pt.ondeath( attacker, pt )
       end
@@ -94,6 +93,10 @@ function pers_death( _p, attacker, pt )
 end
 
 local function spawn_pers ()
+   if not pilot.canSpawn() then
+      return
+   end
+
    local r = rnd.rnd() * wtotal
    local w = 0
    for k,v in ipairs(pers_list) do

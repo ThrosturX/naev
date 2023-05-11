@@ -1,7 +1,7 @@
 --[[
 <?xml version='1.0' encoding='utf8'?>
 <event name="NPC">
- <location>land</location>
+ <location>load</location>
  <chance>100</chance>
 </event>
 --]]
@@ -15,8 +15,6 @@ local vn = require 'vn'
 local lf = require "love.filesystem"
 local npc = require "common.npc"
 
--- luacheck: globals land npc_talk (NPC functions passed by name)
-
 local npcs, npc_list, npc_spawners
 
 function create()
@@ -26,8 +24,8 @@ function create()
       table.insert( npc_list, require( "events.npc."..string.gsub(v,".lua","") ) )
    end
 
+   hook.load( "land" )
    hook.land( "land" )
-   land()
 end
 
 function land ()
@@ -50,22 +48,31 @@ function land ()
          table.insert( npc_spawners, s )
       end
    end
+   if #npc_spawners <= 0 then
+      return
+   end
    table.sort( npc_spawners, function( a, b )
       return a.w > b.w
    end )
 
    local npccache = npc.cache()
-   local num_npc
+   local num_npc = rnd.rnd(2, 5)
    if t.urban then
-      num_npc = rnd.rnd(3, 7)
-   elseif t.rural then
-      num_npc = rnd.rnd(1, 3)
-   else
-      num_npc = rnd.rnd(2, 5)
+      num_npc = num_npc + rnd.rnd(1, 2)
    end
+   if t.rural then
+      num_npc = num_npc - rnd.rnd(1, 2)
+   end
+   local pop = cur:population() -- Add/remove some more based on population
+   if pop < 1e4 then
+      num_npc = num_npc - 1
+   elseif pop > 1e7 then
+      num_npc = num_npc + 1
+   end
+   num_npc = math.max( 1, num_npc ) -- At least one npc
    local w = 0
    npcs = {}
-   for i=0, num_npc do
+   for i=1, num_npc do
       local r = rnd.rnd() * total_w
       local npcdata
       for k,v in ipairs(npc_spawners) do

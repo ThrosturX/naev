@@ -8,10 +8,10 @@ local msg_combined
 local desc_list = {}
 desc_list["generic"] = {
    _("You see a person casually solving some partial differential equations on a napkin."),
-   _("A civilian who seems to be studying an ancient dialect."),
+   _("An individual who seems to be studying an ancient dialect."),
    _("This person is using a portable spectrometer to analyze their fizzy drink."),
-   _("This civilian is staring blankly at the ceiling, while absentmindedly stirring their drink."),
-   _("A civilian with three drinks in front of them who seems to be taking notes of the experience."),
+   _("This individual is staring blankly at the ceiling, while absentmindedly stirring their drink."),
+   _("A person with three drinks in front of them who seems to be taking notes of the experience."),
    _("An individual reading a 500 page proof while drinking hard liquor."),
    _("A slightly tipsy individual who seems to be trying to do peer review."),
    _("A person idly writing a proof using non-Euclidean algebras."),
@@ -29,7 +29,7 @@ desc_list["mining"] = {
 }
 desc_list["tourism"] = {
    function () return fmt.f(_("The person is looking at a {spob} guidebook full of notes and bookmarks intensely."),{spob=spob.cur()}) end,
-   _("A civilian with an expensive looking holo-recorder and a backpack."),
+   _("A person with an expensive looking holo-recorder and a backpack."),
 }
 --desc_list["medical"] = {}
 --desc_list["trade"] = {}
@@ -41,14 +41,13 @@ desc_list["prison"] = {
    _("A Za'lek citizen who is studying a sociology textbook on persuasive techniques."),
 }
 desc_list["station"] = {
-   _("A civilian that seems to have never set foot on a planet."),
+   _("A person that seems to have never set foot on a planet."),
 }
 desc_list["government"] = {
    _("An individual who seems to be using Za'lek documents as a coaster."),
 }
 
 local msg_lore = {
-   _([["It's not easy, dancing to those scientists' tunes. They give you the most impossible tasks! Like, where am I supposed to get a triple redundant helitron converter? Honestly."]]),
    _([["The Soromids? Hah! We Za'lek are the only true scientists in this galaxy."]]),
    _([["I don't understand why we bother sending our research results to the Empire. These asshats can't understand the simplest formulas!"]]),
    _([["Do you know why many optimization algorithms require your objective function to be convex? It's not only because of the question of local minima, but also because if your function is locally concave around the current iterate, the next one will lead to a greater value of your objective function. There are still too many people who don't know this!"]]),
@@ -58,10 +57,30 @@ local msg_lore = {
    _([["I am worried about my sister. She's on trial for 'abusive self-citing' and the public prosecutor has requested a life sentence."]]),
    _([["They opened two professor positions on precision machining in Atryssa Central Manufacturing Lab, and none in Bedimann Advanced Process Lab, but everyone knows that the BAPL needs reinforcement ever since three of its professors retired last cycle. People say it's because a member of Atryssa's lab posted a positive review of the president of the Za'lek central scientific recruitment committee."]]),
    _([["Even if our labs are the best in the galaxy, other factions have their own labs as well. For example, Dvaer Prime Lab for Advanced Mace Rocket Studies used to be very successful until it was nuked by mistake by a warlord during an invasion of the planet."]]),
-   _([["I"m glad the Za'lek Council decided to open up to the rest of the galaxy. Although science is great, it is also nice to meet people who don't care about research impact metrics."]]),
    _([["Lately the drone software updates have been full of bugs. It's because the engineers are more interested in trying new research techniques rather than trying to reduce the accumulated technical debt."]]),
    _([["High energy particle physics experiments are so cliché. Theoretical quantum hyperconductors is where the inderesting stuff happens!"]]),
+   _([["House Za'lek is for researchers, run by researchers. Council members are chosen randomly and forced to fill their obligations to argue and decide about the future of House Za'lek. Lots of people complain, but this is the best way to avoid neopotism and corruption that is rampant in the Empire and other Houses!"]]),
+   _([["Stochastic meritocracy is the best way to run a Great House. House Za'lek randomly choses the council members from rsearchers to rule in the Za'lek Council. No sociology researcher has found a better system yet!"]]),
+   _([["I think I'm getting overweight… Having drones around means I never have to do manual labour."]]),
+   _([["Za'leks are a special kind of lazy. We would rather spend 100 periods programming drones to automate a process than spend 1 period doing it manually."]]),
+   _([["Not many people want to join the military these days. Luckily we have all the drones to fill in!"]]),
 }
+local msg_lore_civilian_only = {
+   _([["It's not easy, dancing to those scientists' tunes. They give you the most impossible tasks! Like, where am I supposed to get a triple redundant helitron converter? Honestly."]]),
+   _([["Life isn't too bad at House Za'lek. Sure I'm not in the spotlight like the researchers, but as long as I stay underfoot I can do whatever I want."]]),
+   _([["I used to be a researcher, but it's much nicer now that I don't have to worry about research metrics and funding!"]]),
+}
+local msg_lore_researcher_only = {
+   _([["I"m glad the Za'lek Council decided to open up to the rest of the galaxy. Although science is great, it is also nice to meet people who don't care about research impact metrics."]]),
+   _([["I was on the Za'lek Council onces. The meetings are endless and people get into fights over trivial things. The food and the bonus salary are great though, but I'm not sure if I would do it again."]]),
+}
+
+-- Organize civilian / researcher text
+local function merge( tbla, tblb )
+   return tmergei( tmergei( {}, tbla ), tblb )
+end
+local msg_lore_researcher = merge( msg_lore, msg_lore_researcher_only )
+local msg_lore_civilian = merge( msg_lore, msg_lore_civilian_only )
 
 local msg_cond = {
    { npc.test_misnHint("Za'lek Black Hole 1"), _([["Did you know there's a ton of tiny Za'lek research outposts throughout the galaxy? Since they have few or no staff, it is common for them to run into trouble."]]) },
@@ -73,8 +92,11 @@ local msg_cond = {
 }
 
 -- Returns a lore message for the given faction.
-local function getMessageLore ()
-   return msg_lore[ rnd.rnd(1,#msg_lore) ]
+local function getMessageLore( researcher )
+   if researcher then
+      return msg_lore_researcher[ rnd.rnd(1,#msg_lore_researcher) ]
+   end
+   return msg_lore_civilian[ rnd.rnd(1,#msg_lore_civilian) ]
 end
 
 local function getMessage( lst )
@@ -88,9 +110,18 @@ return function ()
    local cur, scur = spob.cur()
    local presence = scur:presences()["Za'lek"] or 0
    local tags = cur:tags()
+   local iszlk = false
 
-   -- Need presence in the system
-   if presence <= 0 then
+   local w = 0
+   if cur:faction() == faction.get("Za'lek") then
+      w = 1
+      iszlk = true
+   elseif presence>0 then
+      w = 0.15
+   end
+
+   -- Need positive weight
+   if w <= 0 then
       return nil
    end
 
@@ -101,34 +132,29 @@ return function ()
    end
 
    -- Create a list of conditional messages
-   msg_combined = {}
-   for k,msg in ipairs( msg_cond ) do
-      if msg[1]() then
-         table.insert( msg_combined, msg[2] )
-      end
-   end
+   msg_combined = npc.combine_cond( msg_cond )
 
    -- Add tag-appropriate descriptions
-   local descriptions = tcopy( desc_list["generic"] )
-   for t,v in pairs(tags) do
-      local dl = desc_list[t]
-      if dl then
-         for k,d in ipairs(dl) do
-            table.insert( descriptions, d )
-         end
-      end
-   end
+   local descriptions = npc.combine_desc( desc_list, tags )
 
    local function gen_npc()
-      -- Append the faction to the civilian name, unless there is no faction.
-      local name = _("Za'lek Civilian")
+      local name
+      local researcher
+      if not iszlk or (tags.research and rnd.rnd() < 0.2) or
+            (not tags.research and rnd.rnd() < 0.7) then
+         name = _("Za'lek Civilian")
+         researcher = false
+      else
+         name = _("Za'lek Researcher")
+         researcher = true
+      end
       local desc = descriptions[ rnd.rnd(1,#descriptions) ]
       local prt  = portrait.get( "Za'lek" )
       local image = portrait.getFullPath( prt )
       local msg
       local r = rnd.rnd()
       if r <= 0.45 then
-         msg = getMessageLore()
+         msg = getMessageLore( researcher )
       elseif r <= 0.7 then
          msg = getMessage( npc.msg_tip )
       else
@@ -137,5 +163,5 @@ return function ()
       return { name=name, desc=desc, portrait=prt, image=image, msg=msg }
    end
 
-   return { create=gen_npc }
+   return { create=gen_npc, w=w }
 end

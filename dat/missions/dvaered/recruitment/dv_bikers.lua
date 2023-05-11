@@ -38,7 +38,6 @@ local vntk     = require 'vntk'
 local dv       = require "common.dvaered"
 local pir      = require "common.pirate"
 
--- luacheck: globals enter land loading land_state1 land_state3 escape biker1 biker2 biker3 biker4 bbb1 spawnGang nextActivity timerIncrement startHallway finishHallway tick timeOver killPil1 killPil2 killPil3 bbb1bis bbb2 startDuel killBBB boardBBB
 
 
 local agentPort = "dvaered/dv_military_m2.webp"
@@ -56,6 +55,9 @@ local gangs = { _("Big Bang Band"), -- gang of Blue Belly Billy
                 _("Flamethrower Gang"),
                 _("The Stabbers"),
                 _("The Warriors") }
+
+-- Forward declarations of functions
+local spawnGang, land_state1, land_state3
 
 function create()
    mem.baronpnt, mem.baronsys  = spob.getS("Ulios") -- Where you get paid
@@ -112,7 +114,7 @@ So, as the negotiations with Goddard shareholders is making progress, we identif
 
    -- Mission details
    misn.setTitle(_("Dvaered Negotiation 2"))
-   misn.setReward( "They did not tell you" )
+   misn.setReward( _("They did not tell you") )
    misn.setDesc( fmt.f(_("A Dvaered Warlord needs you to perform a tiny special task for the Baron Sauterfeldt. Only the Baron knows what that task is.")))
    mem.misn_marker = misn.markerAdd( mem.baronpnt )
    mem.misn_state = 0
@@ -264,7 +266,7 @@ function land()
       vn.na(_([[After landing, you are approached by a group of well-dressed people: "His Lordship, the Baron Sauterfeldt, will encounter you. Please follow us to the presidential palace."
 They guide you to the urban transport station, and while a crowd of workers are waiting for the next train in a suffocating heat, you enter a small shuttle: "His Lordship decided the creation of the hypervelocity shuttles system last cycle. Since then, this system saves much time to first-class citizen who used to get stuck in traffic jams or in over-crowded heliports. His genial idea was to use the same tunnel net as the subway."]]))
       vn.na(_([["The shuttle system leads us directly under the presidential palace. I'm afraid you won't see its new pediment that His Lordship had built recently."
-You proceed to follow your guides through a checkpoint into the administrative part of the palace, the kind of place where people wear moccasins and the carpets have no spots. You enter a seemingly common and empty meeting room and start to ask yourself where the Baron is.]])) -- Remark: implicitly, we suggest the baron is in his Kahan, the Pinnacle.
+You proceed to follow your guides through a checkpoint into the administrative part of the palace, the kind of place where people wear moccasins and the carpets have no spots. You enter a seemingly common and empty meeting room and start to ask yourself where the Baron is.]])) -- Remark: implicitly, we suggest the baron is in his Gauss, the Pinnacle.
       vn.na(fmt.f(_([[Suddenly, a huge holographic face appears in the centre of the room:
 "Hello, and welcome on the planet Ulios, {player}! I am the Baron Dovai Sauterfeldt. I hope you got a smooth travel to our very remote humble piece of land! I am truly delighted to meet you, {player}, truly… Or did we already meet before? Mmmm! I am afraid I am perfectly incapable to remember most of the astonishingly inspiring people I tend to meet.
 "Anyway, you are truly most certainly one very inspiring person, {player}, aren't you? Yes, you are! You know what? I am really happy to finally have time to discuss with such a notable person as you."]]), {player=player.name()}))
@@ -290,7 +292,7 @@ The man on your right answers: "Certainly, your Lordship."]]))
          fmt.f(_("Go back to {pnt} in {sys}"), {pnt=mem.baronpnt,sys=mem.baronsys} ),
       } )
       misn.markerMove( mem.misn_marker, mem.convpnt )
-      misn.setReward( "They still did not tell you" )
+      misn.setReward( _("They still did not tell you") )
       misn.setDesc( fmt.f(_("The Baron Sauterfeldt wants you to defy a Hyena biker to steal her left nozzle hubcap, that happens to be sort of a piece of fine art.")))
 
    -- Player arrives at Hyena festival
@@ -361,12 +363,12 @@ end
 function escape()
    -- Player quits in the middle of the Hallway to Hell
    if mem.misn_state == 2 then
-      vntk.msg("Mission Failure",_([[You were supposed to cross the Hallway to Hell, not to cowardly run away.]]))
+      vntk.msg(_("Mission Failure"),_([[You were supposed to cross the Hallway to Hell, not to cowardly run away.]]))
       misn.finish(false)
 
    -- Player escapes the fight with BBB
    elseif mem.misn_state == 5 then
-      vntk.msg("Mission Failure",_([[You were supposed to defeat Blue Belly Billy, not to run away.]]))
+      vntk.msg(_("Mission Failure"),_([[You were supposed to defeat Blue Belly Billy, not to run away.]]))
       misn.finish(false)
    end
 end
@@ -611,7 +613,7 @@ end
 -- Player failed the Hallway to Hell because time is over
 function timeOver()
    player.omsgChange(mem.omsg, _("Time Over!"), 3)
-   vntk.msg( "Mission Failure", [[Too late: you failed the Challenge.]] )
+   vntk.msg( _("Mission Failure"), _([[Too late: you failed the Challenge.]]) )
    mem.pla1:taskClear()
    mem.pla2:taskClear()
    mem.pla3:taskClear()
@@ -620,19 +622,19 @@ end
 
 -- Player destroys a target (Hallway to Hell)
 function killPil1()
-   player.omsgAdd("Target 1 Destroyed", 3, 50)
+   player.omsgAdd(_("Target 1 Destroyed"), 3, 50)
    hook.pilot( mem.pil2, "death", "killPil2" )
    mem.pil2:setHilight()
    player.pilot():setTarget(mem.pil2)
 end
 function killPil2()
-   player.omsgAdd("Target 2 Destroyed", 3, 50)
+   player.omsgAdd(_("Target 2 Destroyed"), 3, 50)
    hook.pilot( mem.pil3, "death", "killPil3" )
    mem.pil3:setHilight()
    player.pilot():setTarget(mem.pil3)
 end
 function killPil3()
-   player.omsgAdd("Target 3 Destroyed: you won!\n(Provided you dodge the remaining missiles)", 3, 50)
+   player.omsgAdd(_("Target 3 Destroyed: you won!\n(Provided you dodge the remaining missiles)"), 3, 50)
    mem.misn_state = 3
    misn.osdActive(2)
    hook.rm(mem.loseH) -- One can not lose once one won
@@ -686,21 +688,21 @@ end
 
 -- Player killed BBB
 function killBBB()
-   vntk.msg("",[[You feel satisfaction while watching the remains of Billy's ship being scattered in all directions by the final explosion of her ship…
+   vntk.msg("",_([[You feel satisfaction while watching the remains of Billy's ship being scattered in all directions by the final explosion of her ship…
 Then, you remember you had to disable and board her ship in order to recover a nozzle hubcap.
-Your mission failed!]])
+Your mission failed!]]))
    misn.finish(false)
 end
 
 -- Player boards BBB
 function boardBBB()
-   vntk.msg("",[[Once your ship is docked with Billy's interceptor, you send your extra-vehicular android to recover the left nozzle hubcap. Soon, the robot comes back with what indeed looks like a very primitive trash top. Before undocking, you realize it might be an occasion to loot a bit around in Billy's ship.]])
+   vntk.msg("",_([[Once your ship is docked with Billy's interceptor, you send your extra-vehicular android to recover the left nozzle hubcap. Soon, the robot comes back with what indeed looks like a very primitive trash top. Before undocking, you realize it might be an occasion to loot a bit around in Billy's ship.]]))
    -- We don't de-board the player: looting the ship is allowed
    mem.misn_state = 6
    misn.osdActive(3)
    misn.markerMove( mem.misn_marker, mem.baronpnt )
    pilot.toggleSpawn()
 
-   local c = commodity.new( "Nozzle Hubcap", "This looks like a prehistoric trash top." )
+   local c = commodity.new( N_("Nozzle Hubcap"), N_("This looks like a prehistoric trash top.") )
    misn.cargoAdd( c, 0 )
 end

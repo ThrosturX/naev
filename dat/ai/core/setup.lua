@@ -17,6 +17,7 @@ local usable_outfits = {
    ["The Bite"]                  = "bite",
    ["The Bite - Improved"]       = "bite",
    ["The Bite - Blood Lust"]     = {"bite", "bite_lust"},
+   ["Plasma Burst"]              = "plasma_burst",
 }
 
 if __debugging then
@@ -51,6 +52,13 @@ function setup.setup( p )
          end
       end
    end
+
+   -- Some tweaks to default AI for certain cases
+   -- TODO probably move atk.choose here if we use this in all cases we initialize pilots (see issue #2197)
+
+   -- Set up some ammo variables
+   --m.ranged_ammo = ai.getweapammo(4) -- uses ai
+   m.equipopt_params = m.equipopt_params or {}
 
    -- Actually added an outfit, so we set the list
    if added then

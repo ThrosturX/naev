@@ -299,15 +299,7 @@ static int sound_al_init (void)
    /* Default values. */
    ret = 0;
 
-   /* Log verbosity (if not specified). */
-#if DEBUG_PARANOID
-   nsetenv( "ALSOFT_LOGLEVEL", "3", 0 );
-   nsetenv( "ALSOFT_TRAP_AL_ERROR", "1", 0 );
-#elif DEBUGGING
-   nsetenv( "ALSOFT_LOGLEVEL", "2", 0 );
-#endif /* DEBUGGING */
-
-   /* we'll need a mutex */
+   /* We'll need a mutex */
    sound_lock = SDL_CreateMutex();
    soundLock();
 
@@ -465,7 +457,6 @@ static int sound_al_init (void)
 
    /* Set up how sound works. */
    alDistanceModel( AL_INVERSE_DISTANCE_CLAMPED ); /* Clamping is fundamental so it doesn't sound like crap. */
-   alDopplerFactor( 1. );
    sound_env( SOUND_ENV_NORMAL, 0. );
 
    /* Check for errors. */
@@ -1586,6 +1577,7 @@ void sound_speedGroup( int group, int enable )
  */
 void sound_volumeGroup( int group, double volume )
 {
+   double v;
    alGroup_t *g;
 
    if (sound_disabled)
@@ -1596,6 +1588,15 @@ void sound_volumeGroup( int group, double volume )
       return;
 
    g->volume = volume;
+
+   soundLock();
+   v = svolume * g->volume;
+   if (g->speed)
+      v *= svolume_speed;
+   for (int j=0; j<g->nsources; j++)
+      alSourcef( g->sources[j], AL_GAIN, v );
+   al_checkErr();
+   soundUnlock();
 }
 
 /**
@@ -1660,6 +1661,7 @@ int sound_env( SoundEnv_t env_type, double param )
       case SOUND_ENV_NORMAL:
          /* Set global parameters. */
          alSpeedOfSound( 3433. );
+         alDopplerFactor( 0.3 );
 
          if (al_info.efx == AL_TRUE) {
             /* Disconnect the effect. */
@@ -1676,6 +1678,7 @@ int sound_env( SoundEnv_t env_type, double param )
 
          /* Set global parameters. */
          alSpeedOfSound( 3433./(1. + f*2.) );
+         alDopplerFactor( 1.0 );
 
          if (al_info.efx == AL_TRUE) {
             if (al_info.efx_reverb == AL_TRUE) {
@@ -1907,7 +1910,7 @@ static int al_loadWav( ALuint *buf, SDL_RWops *rw )
    soundUnlock();
 
    /* Clean up. */
-   free( wav_buffer );
+   SDL_FreeWAV( wav_buffer );
    return 0;
 }
 
@@ -2093,7 +2096,7 @@ static void al_volumeUpdate (void)
    soundUnlock();
 
    /* Do special effects. */
-   spfxL_setSpeedVolume( svolume_speed );
+   spfxL_setSpeedVolume( svolume * svolume_speed );
 }
 
 /**
